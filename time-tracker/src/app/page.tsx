@@ -3,15 +3,20 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import WeeklyTimesheet from '@/components/WeeklyTimesheet';
 import { addDays, subDays, startOfWeek, format } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar, Loader2 } from 'lucide-react';
-import { fetchActivities, fetchTimeEntries, Activity, TimeEntry } from '@/utils/api';
+import { ChevronLeft, ChevronRight, Calendar, Loader2, LogOut } from 'lucide-react';
+import { fetchActivities, fetchTimeEntries, Activity } from '@/utils/api';
+import { supabase } from '@/utils/supabase';
+import { useRouter } from 'next/navigation';
+import { User } from '@supabase/supabase-js';
 
 export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activities, setActivities] = useState<Activity[]>([]);
   const [dbEntries, setDbEntries] = useState<Record<string, Record<string, number>>>({});
   const [totals, setTotals] = useState<Record<string, Record<string, number>>>({});
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   // Ensure the week starts on Monday
   const weekStartDate = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
@@ -21,10 +26,20 @@ export default function Home() {
     return Array.from({ length: 7 }).map((_, i) => addDays(weekStartDate, i));
   }, [weekStartDate]);
 
-  // Load data
+  // Check Auth Status and Load data
   useEffect(() => {
     async function loadData() {
       setLoading(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
+      setUser(session.user);
+
       const startStr = format(weekStartDate, 'yyyy-MM-dd');
       const endStr = format(weekEndDate, 'yyyy-MM-dd');
 
@@ -49,7 +64,12 @@ export default function Home() {
       setLoading(false);
     }
     loadData();
-  }, [weekStartDate, weekEndDate]);
+  }, [weekStartDate, weekEndDate, router]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   const handlePrevWeek = () => setCurrentDate(prev => subDays(prev, 7));
   const handleNextWeek = () => setCurrentDate(prev => addDays(prev, 7));
@@ -99,10 +119,22 @@ export default function Home() {
             <ChevronRight size={20} />
           </button>
         </div>
-        <div>
+        <div className="flex items-center space-x-4">
           <button onClick={handleToday} className="text-sm font-medium text-blue-600 hover:text-blue-800 transition">
             Today
           </button>
+          {user && (
+            <div className="flex items-center space-x-3 border-l border-gray-300 pl-4">
+              <span className="text-sm text-gray-600">{user.email}</span>
+              <button
+                onClick={handleSignOut}
+                className="text-gray-500 hover:text-red-600 transition"
+                title="Sign out"
+              >
+                <LogOut size={18} />
+              </button>
+            </div>
+          )}
         </div>
       </header>
 

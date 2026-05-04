@@ -18,11 +18,6 @@ export interface TimeEntry {
   hours: number;
 }
 
-// Since auth is not yet implemented in the prototype, we use a constant dummy user ID
-// This ensures that the UNIQUE(user_id, activity_id, date) constraint works properly
-// during the upsert (ON CONFLICT) commands.
-const DUMMY_USER_ID = '00000000-0000-0000-0000-000000000000';
-
 export async function fetchActivities(): Promise<Activity[]> {
   const { data, error } = await supabase
     .from('activities')
@@ -58,10 +53,16 @@ export async function fetchTimeEntries(startDate: string, endDate: string): Prom
 }
 
 export async function upsertTimeEntry(activity_id: string, date: string, hours: number): Promise<void> {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error("User must be authenticated to log time.");
+  }
+
   const { error } = await supabase
     .from('time_entries')
     .upsert({
-      user_id: DUMMY_USER_ID,
+      user_id: user.id,
       activity_id,
       date,
       hours
@@ -76,8 +77,14 @@ export async function upsertTimeEntry(activity_id: string, date: string, hours: 
 }
 
 export async function upsertBulkTimeEntries(entries: { activity_id: string, date: string, hours: number }[]): Promise<void> {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error("User must be authenticated to log time.");
+  }
+
   const payload = entries.map(entry => ({
-    user_id: DUMMY_USER_ID,
+    user_id: user.id,
     activity_id: entry.activity_id,
     date: entry.date,
     hours: entry.hours
