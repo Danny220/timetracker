@@ -3,11 +3,12 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import WeeklyTimesheet from '@/components/WeeklyTimesheet';
 import { addDays, subDays, startOfWeek, format } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar, Loader2, LogOut } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Plus } from 'lucide-react';
 import { fetchActivities, fetchTimeEntries, Activity } from '@/utils/api';
 import { supabase } from '@/utils/supabase';
 import { useRouter } from 'next/navigation';
 import { User } from '@supabase/supabase-js';
+import Navbar from '@/components/Navbar';
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -25,6 +26,8 @@ export default function Home() {
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => addDays(weekStartDate, i));
   }, [weekStartDate]);
+
+  const [allAvailableActivities, setAllAvailableActivities] = useState<Activity[]>([]);
 
   // Check Auth Status and Load data
   useEffect(() => {
@@ -48,7 +51,7 @@ export default function Home() {
         fetchTimeEntries(startStr, endStr)
       ]);
 
-      setActivities(fetchedActivities);
+      setAllAvailableActivities(fetchedActivities);
 
       // Map entries to a format the WeeklyTimesheet can use easily: { activityId: { dateStr: hours } }
       const entryMap: Record<string, Record<string, number>> = {};
@@ -59,12 +62,23 @@ export default function Home() {
         entryMap[entry.activity_id][entry.date] = entry.hours;
       });
 
+      // Only display activities that actually have time entries this week by default
+      const activeThisWeek = fetchedActivities.filter(a => entryMap[a.id] !== undefined);
+      setActivities(activeThisWeek);
+
       setDbEntries(entryMap);
       setTotals(entryMap);
       setLoading(false);
     }
     loadData();
   }, [weekStartDate, weekEndDate, router]);
+
+  const handleAddRow = (activityId: string) => {
+    const act = allAvailableActivities.find(a => a.id === activityId);
+    if (act && !activities.find(a => a.id === activityId)) {
+      setActivities([...activities, act]);
+    }
+  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -99,47 +113,32 @@ export default function Home() {
   }, [totals, weekDays]);
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
-      {/* Top Navigation */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center space-x-2">
-          <div className="bg-blue-600 text-white p-2 rounded-lg">
-            <Calendar size={20} />
-          </div>
-          <h1 className="text-xl font-bold text-gray-800 tracking-tight">TimeTracker</h1>
-        </div>
-        <div className="flex items-center space-x-4 bg-gray-100 p-1 rounded-lg">
-          <button onClick={handlePrevWeek} className="p-1 hover:bg-white rounded shadow-sm text-gray-600 transition">
-            <ChevronLeft size={20} />
-          </button>
-          <div className="text-sm font-medium px-4 text-gray-700 min-w-[140px] text-center">
-            {format(weekStartDate, 'MMM d')} - {format(weekEndDate, 'MMM d, yyyy')}
-          </div>
-          <button onClick={handleNextWeek} className="p-1 hover:bg-white rounded shadow-sm text-gray-600 transition">
-            <ChevronRight size={20} />
-          </button>
-        </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
+      <Navbar />
+
+      {/* Week Navigation Toolbar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">My Timesheet</h2>
         <div className="flex items-center space-x-4">
-          <button onClick={handleToday} className="text-sm font-medium text-blue-600 hover:text-blue-800 transition">
+          <button onClick={handleToday} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 transition">
             Today
           </button>
-          {user && (
-            <div className="flex items-center space-x-3 border-l border-gray-300 pl-4">
-              <span className="text-sm text-gray-600">{user.email}</span>
-              <button
-                onClick={handleSignOut}
-                className="text-gray-500 hover:text-red-600 transition"
-                title="Sign out"
-              >
-                <LogOut size={18} />
-              </button>
+          <div className="flex items-center space-x-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 rounded-lg shadow-sm">
+            <button onClick={handlePrevWeek} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300 transition">
+              <ChevronLeft size={20} />
+            </button>
+            <div className="text-sm font-medium px-4 text-gray-700 dark:text-gray-200 min-w-[140px] text-center">
+              {format(weekStartDate, 'MMM d')} - {format(weekEndDate, 'MMM d, yyyy')}
             </div>
-          )}
+            <button onClick={handleNextWeek} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300 transition">
+              <ChevronRight size={20} />
+            </button>
+          </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Workspace */}
-      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto pb-8 px-4 sm:px-6 lg:px-8">
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[400px] relative">
 
@@ -186,6 +185,25 @@ export default function Home() {
                 />
               );
             })}
+
+            {/* Add Row Button */}
+            <div className="p-4 border-b border-gray-200">
+              <select
+                onChange={(e) => {
+                  handleAddRow(e.target.value);
+                  e.target.value = "";
+                }}
+                className="text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                defaultValue=""
+              >
+                <option value="" disabled>+ Add Project / Leave</option>
+                {allAvailableActivities.filter(a => !activities.find(act => act.id === a.id)).map(a => (
+                  <option key={a.id} value={a.id}>
+                    {a.project.name} - {a.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Grid Footer (Totals) */}

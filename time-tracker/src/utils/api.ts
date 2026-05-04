@@ -9,6 +9,7 @@ export interface Project {
 export interface Activity {
   id: string;
   name: string;
+  is_leave: boolean;
   project: Project;
 }
 
@@ -19,21 +20,44 @@ export interface TimeEntry {
 }
 
 export async function fetchActivities(): Promise<Activity[]> {
-  const { data, error } = await supabase
+  // Only fetch assigned activities or generic leaves
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // First get the projects assigned to the user
+  const { data: assignments } = await supabase
+    .from('project_assignments')
+    .select('project_id')
+    .eq('user_id', user.id);
+
+  const assignedProjectIds = assignments?.map(a => a.project_id) || [];
+
+  // Now fetch activities that belong to those assigned projects, OR are generic leaves (project_id = 0...1)
+  const leaveProjectId = '00000000-0000-0000-0000-000000000001';
+
+  let query = supabase
     .from('activities')
     .select(`
       id,
       name,
+      is_leave,
+      project_id,
       project:projects(id, name)
     `);
+
+  if (assignedProjectIds.length > 0) {
+    query = query.or(`project_id.in.(${assignedProjectIds.join(',')}),project_id.eq.${leaveProjectId}`);
+  } else {
+    query = query.eq('project_id', leaveProjectId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Error fetching activities", error);
     return [];
   }
 
-  // The Supabase join syntax `project:projects(id, name)` returns the relation as an object.
-  // We cast it to ensure it matches the strict Activity interface.
   return data as unknown as Activity[];
 }
 
@@ -52,11 +76,19 @@ export async function fetchTimeEntries(startDate: string, endDate: string): Prom
   return data as TimeEntry[];
 }
 
-export async function upsertTimeEntry(activity_id: string, date: string, hours: number): Promise<void> {
+export async function upsertTimeEntry(activity_id: string, date: string, hours: number, isLeave: boolean = false): Promise<void> {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) {
     throw new Error("User must be authenticated to log time.");
+  }
+
+  let status = 'approved';
+  if (isLeave) {
+    const { data: settings } = await supabase.from('settings').select('require_leave_approval').eq('id', 1).single();
+    if (settings?.require_leave_approval) {
+      status = 'pending';
+    }
   }
 
   const { error } = await supabase
@@ -65,7 +97,8 @@ export async function upsertTimeEntry(activity_id: string, date: string, hours: 
       user_id: user.id,
       activity_id,
       date,
-      hours
+      hours,
+      status
     }, {
       onConflict: 'user_id, activity_id, date'
     });
@@ -76,18 +109,22 @@ export async function upsertTimeEntry(activity_id: string, date: string, hours: 
   }
 }
 
-export async function upsertBulkTimeEntries(entries: { activity_id: string, date: string, hours: number }[]): Promise<void> {
+export async function upsertBulkTimeEntries(entries: { activity_id: string, date: string, hours: number, isLeave?: boolean }[]): Promise<void> {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError || !user) {
     throw new Error("User must be authenticated to log time.");
   }
 
+  const { data: settings } = await supabase.from('settings').select('require_leave_approval').eq('id', 1).single();
+  const requireApproval = settings?.require_leave_approval || false;
+
   const payload = entries.map(entry => ({
     user_id: user.id,
     activity_id: entry.activity_id,
     date: entry.date,
-    hours: entry.hours
+    hours: entry.hours,
+    status: (entry.isLeave && requireApproval) ? 'pending' : 'approved'
   }));
 
   const { error } = await supabase

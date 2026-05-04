@@ -99,7 +99,8 @@ export default function WeeklyTimesheet({ activity, weekStartDate, existingEntri
       .map(([dateStr, hours]) => ({
         activity_id: activity.id,
         date: dateStr,
-        hours: Number(hours)
+        hours: Number(hours),
+        isLeave: (activity as any).is_leave // Avoid local type interface mismatch
       }))
       .filter(entry => entry.hours > 0);
 
@@ -126,7 +127,7 @@ export default function WeeklyTimesheet({ activity, weekStartDate, existingEntri
       setSavingStatus(prev => ({ ...prev, [dateStr]: 'saving' }));
 
       try {
-        await upsertTimeEntry(activity.id, dateStr, numValue);
+        await upsertTimeEntry(activity.id, dateStr, numValue, (activity as any).is_leave);
         setSavingStatus(prev => ({ ...prev, [dateStr]: 'saved' }));
         onTotalChange(activity.id, { ...entries, [dateStr]: numValue } as Record<string, number>);
 
