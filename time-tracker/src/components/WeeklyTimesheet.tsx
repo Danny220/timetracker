@@ -22,7 +22,7 @@ interface WeeklyTimesheetProps {
   onTotalChange: (activityId: string, totals: Record<string, number>) => void;
 }
 
-export default function WeeklyTimesheet({ activity, weekStartDate, existingEntries, onTotalChange }: WeeklyTimesheetProps) {
+const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStartDate, existingEntries, onTotalChange }: WeeklyTimesheetProps) {
   // Initialize state directly from props to avoid unnecessary sync effects
   const [entries, setEntries] = useState<Record<string, number | string>>(existingEntries || {});
   const [showOverrideModal, setShowOverrideModal] = useState(false);
@@ -230,4 +230,6 @@ export default function WeeklyTimesheet({ activity, weekStartDate, existingEntri
       )}
     </div>
   );
-}
+});
+
+export default WeeklyTimesheet;
