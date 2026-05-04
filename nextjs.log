@@ -1,0 +1,49 @@
+
+> time-tracker@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+✓ Ready in 504ms
+
+○ Compiling / ...
+ GET / 200 in 6.7s (next.js: 6.4s, application-code: 366ms)
+ GET / 200 in 425ms (next.js: 161ms, application-code: 263ms)
+[browser] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+    at WeeklyTimesheet.useEffect (src/components/WeeklyTimesheet.tsx:36:7)
+  34 |   useEffect(() => {
+  35 |     if (existingEntries) {
+> 36 |       setEntries(existingEntries);
+     |       ^
+  37 |       onTotalChange(activity.id, existingEntries);
+  38 |     }
+  39 |   }, [existingEntries, activity.id, onTotalChange]); (src/components/WeeklyTimesheet.tsx:36:7)
+[browser] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+    at WeeklyTimesheet.useEffect (src/components/WeeklyTimesheet.tsx:36:7)
+  34 |   useEffect(() => {
+  35 |     if (existingEntries) {
+> 36 |       setEntries(existingEntries);
+     |       ^
+  37 |       onTotalChange(activity.id, existingEntries);
+  38 |     }
+  39 |   }, [existingEntries, activity.id, onTotalChange]); (src/components/WeeklyTimesheet.tsx:36:7)
+[browser] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+    at WeeklyTimesheet.useEffect (src/components/WeeklyTimesheet.tsx:36:7)
+  34 |   useEffect(() => {
+  35 |     if (existingEntries) {
+> 36 |       setEntries(existingEntries);
+     |       ^
+  37 |       onTotalChange(activity.id, existingEntries);
+  38 |     }
+  39 |   }, [existingEntries, activity.id, onTotalChange]); (src/components/WeeklyTimesheet.tsx:36:7)
+[browser] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+    at WeeklyTimesheet.useEffect (src/components/WeeklyTimesheet.tsx:36:7)
+  34 |   useEffect(() => {
+  35 |     if (existingEntries) {
+> 36 |       setEntries(existingEntries);
+     |       ^
+  37 |       onTotalChange(activity.id, existingEntries);
+  38 |     }
+  39 |   }, [existingEntries, activity.id, onTotalChange]); (src/components/WeeklyTimesheet.tsx:36:7)
+ GET / 200 in 240ms (next.js: 20ms, application-code: 220ms)
