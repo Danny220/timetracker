@@ -67,21 +67,21 @@ To transition from the simulated prototype to a fully functional database, follo
    ```bash
    npx supabase migration up
    ```
-4. Copy the local `API URL` and `anon key` provided in the terminal output and paste them into a `.env.local` file:
+4. Copy the local `API URL` and `publishable api key` provided in the terminal output and paste them into a `.env.local` file:
    ```env
    NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-local-anon-key
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-local-publishable-key
    ```
 
 #### Option B: Cloud Supabase (Production)
 1. Go to [supabase.com](https://supabase.com) and create a new project.
 2. Navigate to the **SQL Editor** in your Supabase dashboard.
 3. Open the file `supabase/migrations/00000_initial_schema.sql` from this repository, copy its contents, and run it in the Supabase SQL Editor.
-4. Go to **Project Settings -> API** and copy your `Project URL` and `anon public` key.
+4. Go to **Project Settings -> API** and copy your `Project URL` and `Publishable API` key.
 5. Create a `.env.local` file in the root of the `time-tracker` folder:
    ```env
    NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-production-anon-key
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-production-publishable-key
    ```
 
 ### 4. Wire up the Real API
