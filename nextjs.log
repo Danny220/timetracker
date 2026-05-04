@@ -47,3 +47,6 @@
   38 |     }
   39 |   }, [existingEntries, activity.id, onTotalChange]); (src/components/WeeklyTimesheet.tsx:36:7)
  GET / 200 in 240ms (next.js: 20ms, application-code: 220ms)
+ GET / 200 in 1750ms (next.js: 766ms, application-code: 984ms)
+○ Compiling /login ...
+ GET /login 200 in 3.1s (next.js: 3.1s, application-code: 67ms)

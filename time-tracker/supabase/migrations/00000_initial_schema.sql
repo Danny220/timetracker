@@ -19,9 +19,7 @@ CREATE TABLE public.activities (
 -- 3. Create Time Entries Table
 CREATE TABLE public.time_entries (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  -- For demo purposes without full auth, we'll use a generic user_id or allow it to be nullable for testing
-  -- In a real app, this should reference auth.users(id)
-  user_id UUID,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   activity_id UUID NOT NULL REFERENCES public.activities(id) ON DELETE CASCADE,
   date DATE NOT NULL,
   hours NUMERIC(5, 2) NOT NULL CHECK (hours >= 0 AND hours <= 24),
@@ -35,12 +33,26 @@ ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.time_entries ENABLE ROW LEVEL SECURITY;
 
--- Create permissive policies for development (replace with strict policies in production)
-CREATE POLICY "Allow read access on projects for all" ON public.projects FOR SELECT USING (true);
-CREATE POLICY "Allow read access on activities for all" ON public.activities FOR SELECT USING (true);
+-- Projects: All authenticated users can read active projects
+CREATE POLICY "Allow read access on projects for authenticated users"
+ON public.projects FOR SELECT TO authenticated USING (true);
 
--- Time entries policies (allowing all for local dev/demo)
-CREATE POLICY "Allow all actions on time_entries for all" ON public.time_entries FOR ALL USING (true);
+-- Activities: All authenticated users can read activities
+CREATE POLICY "Allow read access on activities for authenticated users"
+ON public.activities FOR SELECT TO authenticated USING (true);
+
+-- Time entries policies: Strict RLS based on user_id
+CREATE POLICY "Users can view their own time entries"
+ON public.time_entries FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own time entries"
+ON public.time_entries FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own time entries"
+ON public.time_entries FOR UPDATE TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own time entries"
+ON public.time_entries FOR DELETE TO authenticated USING (auth.uid() = user_id);
 
 -- Insert Mock Data
 INSERT INTO public.projects (id, name, status) VALUES
