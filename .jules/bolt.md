@@ -1,0 +1,3 @@
+## 2024-05-05 - Missing Memoization in Critical Render Path
+**Learning:** In React components (like `WeeklyTimesheet.tsx`) rendering arrays of items with complex computed sub-states (e.g. checking if a day is a holiday dynamically for every single cell during re-renders), repeated invocations of date formatters and complex logic like `getEasterSunday` cause huge CPU overhead.
+**Action:** When evaluating dates repetitively, implement simple module-level dictionary caching for year-based static data (like holidays) and avoid repeated `format()` calls by reusing already formatted `yyyy-MM-dd` date strings to dramatically reduce latency.
