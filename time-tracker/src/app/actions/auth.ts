@@ -34,7 +34,7 @@ export async function inviteUser(email: string, role: string, accessToken: strin
       .eq('id', user.id)
       .single();
 
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'business_manager')) {
+    if (!profile || profile.role !== 'admin') {
       throw new Error("Forbidden: You do not have permission to invite users.");
     }
 
