@@ -152,6 +152,7 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
         </div>
         <button
           onClick={handleMassFill}
+          aria-label="Mass fill 8 hours for this row"
           className="text-gray-400 hover:text-blue-600 p-1 rounded transition"
           title="Mass Fill (8h/Day) for this row"
         >
