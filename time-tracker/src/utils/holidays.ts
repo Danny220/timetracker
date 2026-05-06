@@ -22,10 +22,14 @@ function getEasterSunday(year: number): Date {
   return new Date(year, month - 1, day);
 }
 
+const holidaysCache: Record<number, Record<string, string>> = {};
+
 /**
  * Returns a map of Italian public holidays for a given year.
  */
 export function getItalianHolidays(year: number): Record<string, string> {
+  if (holidaysCache[year]) return holidaysCache[year];
+
   const easter = getEasterSunday(year);
 
   // Easter Monday (Pasquetta) is the day after Easter
@@ -46,6 +50,7 @@ export function getItalianHolidays(year: number): Record<string, string> {
     [format(easterMonday, 'yyyy-MM-dd')]: "Lunedì dell'Angelo (Pasquetta)"
   };
 
+  holidaysCache[year] = holidays;
   return holidays;
 }
 
@@ -59,7 +64,9 @@ export function isNonWorkingDay(dateString: string): { isNonWorking: boolean; re
   const year = date.getFullYear();
   const holidays = getItalianHolidays(year);
 
-  const formattedDate = format(date, 'yyyy-MM-dd');
+  // Avoid redundant format call if dateString is already in yyyy-MM-dd format
+  const isFormatted = /^\d{4}-\d{2}-\d{2}$/.test(dateString);
+  const formattedDate = isFormatted ? dateString : format(date, 'yyyy-MM-dd');
   if (holidays[formattedDate]) {
     return { isNonWorking: true, reason: holidays[formattedDate] };
   }
