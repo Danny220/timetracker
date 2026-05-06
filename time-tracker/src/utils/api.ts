@@ -138,3 +138,22 @@ export async function upsertBulkTimeEntries(entries: { activity_id: string, date
     throw error;
   }
 }
+
+
+export async function deleteTimeEntry(activity_id: string, date: string): Promise<void> {
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error("User must be authenticated to delete time.");
+  }
+
+  const { error } = await supabase
+    .from('time_entries')
+    .delete()
+    .match({ user_id: user.id, activity_id, date });
+
+  if (error) {
+    console.error("Error deleting time entry", error);
+    throw error;
+  }
+}

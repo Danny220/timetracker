@@ -5,7 +5,7 @@ import { useTheme } from 'next-themes';
 import { supabase } from '@/utils/supabase';
 import { useRouter, usePathname } from 'next/navigation';
 import { User } from '@supabase/supabase-js';
-import { Calendar, LogOut, Moon, Sun, Settings, LayoutDashboard, Monitor } from 'lucide-react';
+import { Calendar, LogOut, Moon, Sun, Monitor } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Navbar() {
@@ -17,7 +17,11 @@ export default function Navbar() {
   const pathname = usePathname();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
     async function loadUser() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {

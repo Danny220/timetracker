@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { isNonWorkingDay } from '@/utils/holidays';
 import { addDays, format } from 'date-fns';
 import { Zap, Loader2, Check } from 'lucide-react';
-import { upsertTimeEntry, upsertBulkTimeEntries } from '@/utils/api';
+import { upsertTimeEntry, upsertBulkTimeEntries, deleteTimeEntry } from '@/utils/api';
 
 interface Activity {
   id: string;
@@ -100,7 +100,7 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
         activity_id: activity.id,
         date: dateStr,
         hours: Number(hours),
-        isLeave: (activity as any).is_leave // Avoid local type interface mismatch
+        isLeave: (activity as unknown as { is_leave: boolean }).is_leave // Avoid local type interface mismatch
       }))
       .filter(entry => entry.hours > 0);
 
@@ -127,7 +127,7 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
       setSavingStatus(prev => ({ ...prev, [dateStr]: 'saving' }));
 
       try {
-        await upsertTimeEntry(activity.id, dateStr, numValue, (activity as any).is_leave);
+        await upsertTimeEntry(activity.id, dateStr, numValue, (activity as unknown as { is_leave: boolean }).is_leave);
         setSavingStatus(prev => ({ ...prev, [dateStr]: 'saved' }));
         onTotalChange(activity.id, { ...entries, [dateStr]: numValue } as Record<string, number>);
 
@@ -138,6 +138,33 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
       } catch (e) {
         console.error("Failed to save", e);
         setSavingStatus(prev => ({ ...prev, [dateStr]: null }));
+      }
+    } else if (!value) {
+      // If the input is cleared entirely, we delete the entry from the database
+      // The user reviewer noted that 'entries[dateStr]' becomes '' immediately on change,
+      // so checking existingEntries[dateStr] is the correct way to see if we actually
+      // need to perform a database deletion for this newly cleared field.
+      if (existingEntries?.[dateStr] !== undefined) {
+        setSavingStatus(prev => ({ ...prev, [dateStr]: 'saving' }));
+        try {
+          await deleteTimeEntry(activity.id, dateStr);
+          setSavingStatus(prev => ({ ...prev, [dateStr]: 'saved' }));
+
+          const newEntries = { ...entries };
+          delete newEntries[dateStr];
+          setEntries(newEntries);
+          onTotalChange(activity.id, newEntries as Record<string, number>);
+
+          // Clear checkmark after 2s
+          setTimeout(() => {
+            setSavingStatus(prev => ({ ...prev, [dateStr]: null }));
+          }, 2000);
+        } catch (e) {
+          console.error("Failed to delete", e);
+          setSavingStatus(prev => ({ ...prev, [dateStr]: null }));
+          // Revert visual state on failure
+          setEntries(prev => ({ ...prev, [dateStr]: existingEntries?.[dateStr] || '' }));
+        }
       }
     }
   };
