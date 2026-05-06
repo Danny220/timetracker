@@ -95,7 +95,7 @@ export default function Navbar() {
       <div className="flex items-center space-x-4">
         {/* Theme Dropdown */}
         <div className="relative group">
-          <button className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+          <button aria-label="Toggle theme" className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
             {theme === 'dark' ? <Moon size={18} /> : theme === 'light' ? <Sun size={18} /> : <Monitor size={18} />}
           </button>
           <div className="absolute right-0 mt-2 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
@@ -119,6 +119,7 @@ export default function Navbar() {
             </div>
             <button
               onClick={handleSignOut}
+              aria-label="Sign out"
               className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
               title="Sign out"
             >

@@ -124,13 +124,13 @@ export default function Home() {
             Today
           </button>
           <div className="flex items-center space-x-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 rounded-lg shadow-sm">
-            <button onClick={handlePrevWeek} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300 transition">
+            <button onClick={handlePrevWeek} aria-label="Previous week" className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300 transition">
               <ChevronLeft size={20} />
             </button>
             <div className="text-sm font-medium px-4 text-gray-700 dark:text-gray-200 min-w-[140px] text-center">
               {format(weekStartDate, 'MMM d')} - {format(weekEndDate, 'MMM d, yyyy')}
             </div>
-            <button onClick={handleNextWeek} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300 transition">
+            <button onClick={handleNextWeek} aria-label="Next week" className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-300 transition">
               <ChevronRight size={20} />
             </button>
           </div>
