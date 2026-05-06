@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import WeeklyTimesheet from '@/components/WeeklyTimesheet';
 import { addDays, subDays, startOfWeek, format } from 'date-fns';
-import { ChevronLeft, ChevronRight, Loader2, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { fetchActivities, fetchTimeEntries, Activity } from '@/utils/api';
 import { supabase } from '@/utils/supabase';
 import { useRouter } from 'next/navigation';
@@ -11,7 +11,7 @@ import { User } from '@supabase/supabase-js';
 import Navbar from '@/components/Navbar';
 
 export default function Home() {
-  const [user, setUser] = useState<User | null>(null);
+  // const [user, setUser] = useState<User | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activities, setActivities] = useState<Activity[]>([]);
   const [dbEntries, setDbEntries] = useState<Record<string, Record<string, number>>>({});
@@ -41,7 +41,7 @@ export default function Home() {
         return;
       }
 
-      setUser(session.user);
+      // setUser(session.user);
 
       const startStr = format(weekStartDate, 'yyyy-MM-dd');
       const endStr = format(weekEndDate, 'yyyy-MM-dd');
@@ -80,10 +80,6 @@ export default function Home() {
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-  };
 
   const handlePrevWeek = () => setCurrentDate(prev => subDays(prev, 7));
   const handleNextWeek = () => setCurrentDate(prev => addDays(prev, 7));
