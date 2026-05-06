@@ -144,7 +144,7 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
       // The user reviewer noted that 'entries[dateStr]' becomes '' immediately on change,
       // so checking existingEntries[dateStr] is the correct way to see if we actually
       // need to perform a database deletion for this newly cleared field.
-      if (existingEntries?.[dateStr] !== undefined) {
+      if (existingEntries?.[dateStr] !== undefined && String(existingEntries?.[dateStr]) !== '') {
         setSavingStatus(prev => ({ ...prev, [dateStr]: 'saving' }));
         try {
           await deleteTimeEntry(activity.id, dateStr);
@@ -170,16 +170,16 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
   };
 
   return (
-    <div className="flex border-b border-gray-100 hover:bg-gray-50 transition-colors">
+    <div className="flex border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
       {/* Row Header (Project & Activity) */}
-      <div className="w-1/4 p-3 flex items-center justify-between border-r border-gray-200">
+      <div className="w-1/4 p-3 flex items-center justify-between border-r border-gray-200 dark:border-gray-700">
         <div>
-          <div className="font-semibold text-gray-800 text-sm">{activity.project.name}</div>
-          <div className="text-xs text-gray-500">{activity.name}</div>
+          <div className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{activity.project.name}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">{activity.name}</div>
         </div>
         <button
           onClick={handleMassFill}
-          className="text-gray-400 hover:text-blue-600 p-1 rounded transition"
+          className="text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 p-1 rounded transition"
           title="Mass Fill (8h/Day) for this row"
         >
           <Zap size={18} />
@@ -197,7 +197,7 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
           return (
             <div
               key={dateStr}
-              className={`relative p-2 border-r border-gray-200 last:border-r-0 flex flex-col justify-center items-center ${isNonWorking ? 'bg-gray-100/60' : 'bg-transparent'} ${isToday ? 'bg-blue-50/30' : ''}`}
+              className={`relative p-2 border-r border-gray-200 dark:border-gray-700 last:border-r-0 flex flex-col justify-center items-center ${isNonWorking ? 'bg-gray-100/60 dark:bg-gray-800/60' : 'bg-transparent'} ${isToday ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
             >
               <input
                 type="number"
@@ -207,7 +207,7 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
                 value={entries[dateStr] || ''}
                 onChange={(e) => handleInputChange(dateStr, e.target.value)}
                 onBlur={(e) => handleInputBlur(dateStr, e.target.value)}
-                className={`w-full text-center bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-400 rounded p-1 ${isNonWorking && entries[dateStr] ? 'text-orange-600 font-semibold' : 'text-gray-800'}`}
+                className={`w-full text-center bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-400 rounded p-1 ${isNonWorking && entries[dateStr] ? 'text-orange-600 dark:text-orange-400 font-semibold' : 'text-gray-800 dark:text-gray-200'}`}
                 placeholder="-"
               />
               {status === 'saving' && <Loader2 size={12} className="absolute bottom-1 right-1 text-gray-400 animate-spin" />}
@@ -220,28 +220,28 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
       {/* Override Modal */}
       {showOverrideModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full border border-gray-200">
-            <h4 className="text-lg font-bold text-gray-800 mb-2">Non-Working Days Detected</h4>
-            <p className="text-sm text-gray-600 mb-4">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-gray-700">
+            <h4 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Non-Working Days Detected</h4>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
               You are attempting to mass-fill 8 hours across a week that contains holidays or weekends. Select the ones you want to override and log overtime for:
             </p>
-            <div className="space-y-2 mb-6 max-h-48 overflow-y-auto bg-gray-50 p-3 rounded border border-gray-200">
+            <div className="space-y-2 mb-6 max-h-48 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-3 rounded border border-gray-200 dark:border-gray-700">
               {conflictDates.map(({ date, reason }) => (
-                <label key={date} className="flex items-center space-x-3 cursor-pointer p-1 hover:bg-gray-100 rounded">
+                <label key={date} className="flex items-center space-x-3 cursor-pointer p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
                   <input
                     type="checkbox"
                     checked={!!selectedOverrides[date]}
                     onChange={(e) => setSelectedOverrides({...selectedOverrides, [date]: e.target.checked})}
                     className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                   />
-                  <span className="text-sm text-gray-800 font-medium">{format(new Date(date), 'MMM do')} <span className="text-gray-500 font-normal">({reason})</span></span>
+                  <span className="text-sm text-gray-800 dark:text-gray-200 font-medium">{format(new Date(date), 'MMM do')} <span className="text-gray-500 dark:text-gray-400 font-normal">({reason})</span></span>
                 </label>
               ))}
             </div>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={handleSkipOverrides}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition"
               >
                 Skip Conflicts
               </button>

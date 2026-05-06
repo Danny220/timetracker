@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { fetchActivities, fetchTimeEntries, Activity } from '@/utils/api';
 import { supabase } from '@/utils/supabase';
 import { useRouter } from 'next/navigation';
-import { User } from '@supabase/supabase-js';
+
 import Navbar from '@/components/Navbar';
 
 export default function Home() {
@@ -109,14 +109,14 @@ export default function Home() {
   }, [totals, weekDays]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans transition-colors">
       <Navbar />
 
       {/* Week Navigation Toolbar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">My Timesheet</h2>
         <div className="flex items-center space-x-4">
-          <button onClick={handleToday} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 transition">
+          <button onClick={handleToday} className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition">
             Today
           </button>
           <div className="flex items-center space-x-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1 rounded-lg shadow-sm">
@@ -136,28 +136,28 @@ export default function Home() {
       {/* Main Workspace */}
       <main className="max-w-7xl mx-auto pb-8 px-4 sm:px-6 lg:px-8">
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[400px] relative">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden min-h-[400px] relative">
 
           {loading && (
-            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-20 flex items-center justify-center">
+            <div className="absolute inset-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-[1px] z-20 flex items-center justify-center">
               <Loader2 className="animate-spin text-blue-600" size={32} />
             </div>
           )}
 
           {/* Grid Header (Days of Week) */}
-          <div className="flex border-b border-gray-200 bg-gray-50/50">
-            <div className="w-1/4 p-4 font-semibold text-sm text-gray-600 uppercase tracking-wider">
+          <div className="flex border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+            <div className="w-1/4 p-4 font-semibold text-sm text-gray-600 dark:text-gray-400 uppercase tracking-wider">
               Project / Activity
             </div>
             <div className="w-3/4 grid grid-cols-7">
               {weekDays.map(date => {
                 const isToday = format(new Date(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
                 return (
-                  <div key={date.toString()} className={`p-3 text-center border-r border-gray-200 last:border-r-0 ${isToday ? 'bg-blue-50/50' : ''}`}>
-                    <div className={`text-xs font-medium uppercase ${isToday ? 'text-blue-600' : 'text-gray-500'}`}>
+                  <div key={date.toString()} className={`p-3 text-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 ${isToday ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''}`}>
+                    <div className={`text-xs font-medium uppercase ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
                       {format(date, 'EEE')}
                     </div>
-                    <div className={`text-lg font-light ${isToday ? 'text-blue-700 font-medium' : 'text-gray-900'}`}>
+                    <div className={`text-lg font-light ${isToday ? 'text-blue-700 dark:text-blue-300 font-medium' : 'text-gray-900 dark:text-gray-200'}`}>
                       {format(date, 'dd')}
                     </div>
                   </div>
@@ -183,13 +183,13 @@ export default function Home() {
             })}
 
             {/* Add Row Button */}
-            <div className="p-4 border-b border-gray-200">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <select
                 onChange={(e) => {
                   handleAddRow(e.target.value);
                   e.target.value = "";
                 }}
-                className="text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 defaultValue=""
               >
                 <option value="" disabled>+ Add Project / Leave</option>
@@ -203,8 +203,8 @@ export default function Home() {
           </div>
 
           {/* Grid Footer (Totals) */}
-          <div className="flex border-t border-gray-200 bg-gray-50">
-            <div className="w-1/4 p-4 font-medium text-gray-700 text-right">
+          <div className="flex border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
+            <div className="w-1/4 p-4 font-medium text-gray-700 dark:text-gray-300 text-right">
               Total Hours
             </div>
             <div className="w-3/4 grid grid-cols-7">
@@ -215,8 +215,8 @@ export default function Home() {
                 const isInvalid = total > 24;
 
                 return (
-                  <div key={i} className={`p-4 text-center font-semibold border-r border-gray-200 last:border-r-0
-                    ${isInvalid ? 'text-red-600 bg-red-50' : isOvertime ? 'text-orange-600' : 'text-gray-700'}
+                  <div key={i} className={`p-4 text-center font-semibold border-r border-gray-200 dark:border-gray-700 last:border-r-0
+                    ${isInvalid ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20' : isOvertime ? 'text-orange-600 dark:text-orange-400' : 'text-gray-700 dark:text-gray-300'}
                   `}>
                     {total > 0 ? total : '-'}
                   </div>

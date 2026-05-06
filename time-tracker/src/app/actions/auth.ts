@@ -6,6 +6,10 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'service-role-key-placeholder';
 
+if (supabaseServiceKey === 'service-role-key-placeholder') {
+  console.warn("WARNING: SUPABASE_SERVICE_ROLE_KEY is missing or invalid. Inviting users will fail because it requires admin privileges.");
+}
+
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
@@ -28,7 +32,9 @@ export async function inviteUser(email: string, role: string, accessToken: strin
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) throw new Error("Unauthorized");
 
-    const { data: profile } = await supabaseAdmin
+    // SECURE: Use the authenticated user's client, not the admin client, so RLS policies enforce access
+    // This also avoids silent failures when SUPABASE_SERVICE_ROLE_KEY is missing.
+    const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -39,6 +45,9 @@ export async function inviteUser(email: string, role: string, accessToken: strin
     }
 
     // 1. Invite the user using the Service Role bypass
+    if (supabaseServiceKey === 'service-role-key-placeholder') {
+      throw new Error("Server configuration error: SUPABASE_SERVICE_ROLE_KEY is missing. You cannot invite users until the admin sets this variable.");
+    }
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email);
 
     if (authError) throw authError;
@@ -56,8 +65,8 @@ export async function inviteUser(email: string, role: string, accessToken: strin
     }
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Invite User Error:", error);
-    return { success: false, message: error.message };
+    return { success: false, message: error instanceof Error ? error.message : "Unknown error" };
   }
 }
