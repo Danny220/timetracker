@@ -1,0 +1,3 @@
+## 2026-05-07 - Form Labels & Semantic Buttons
+**Learning:** I found a pattern of missing `htmlFor`/`id` bindings on `<label>` and `<input>`/`<select>` pairs, resulting in non-accessible forms where screen readers cannot correctly associate descriptions. I also found `<div>` tags being used with `onClick` handlers for interactive, accordion-like expanding content without keyboard accessibility or focus indicators.
+**Action:** Replace `onClick` on non-semantic elements (like `div`) with a properly configured `<button>` element that supports focus states (`focus-visible:ring-2`) and ARIA properties (`aria-expanded`). Always bind `<label>` with `<input>`/`<select>` using `htmlFor` and `id` properties.

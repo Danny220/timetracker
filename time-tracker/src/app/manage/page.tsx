@@ -233,7 +233,12 @@ export default function ManageDashboard() {
             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
               {projects.map(proj => (
                 <li key={proj.id} className="py-4 flex flex-col">
-                  <div className="flex justify-between items-center cursor-pointer" onClick={() => setExpandedProject(expandedProject === proj.id ? null : proj.id)}>
+                  <button
+                    type="button"
+                    className="flex justify-between items-center w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded px-1 -mx-1"
+                    onClick={() => setExpandedProject(expandedProject === proj.id ? null : proj.id)}
+                    aria-expanded={expandedProject === proj.id}
+                  >
                     <div className="flex items-center space-x-2">
                       {expandedProject === proj.id ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />}
                       <span className="font-medium text-gray-800 dark:text-gray-200">{proj.name}</span>
@@ -241,7 +246,7 @@ export default function ManageDashboard() {
                     <span className={`text-xs px-2 py-1 rounded-full ${proj.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800'}`}>
                       {proj.status}
                     </span>
-                  </div>
+                  </button>
 
                   {expandedProject === proj.id && (
                     <div className="mt-4 pl-6 border-l-2 border-gray-200 dark:border-gray-700">
@@ -319,8 +324,9 @@ export default function ManageDashboard() {
               </h3>
               <form onSubmit={handleAssignUser} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Project</label>
+                  <label htmlFor="assignmentProjectId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Project</label>
                   <select
+                    id="assignmentProjectId"
                     value={assignmentProjectId}
                     onChange={e => setAssignmentProjectId(e.target.value)}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm dark:bg-gray-900 dark:text-white"
@@ -331,8 +337,9 @@ export default function ManageDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">User</label>
+                  <label htmlFor="assignmentUserId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">User</label>
                   <select
+                    id="assignmentUserId"
                     value={assignmentUserId}
                     onChange={e => setAssignmentUserId(e.target.value)}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm dark:bg-gray-900 dark:text-white"
