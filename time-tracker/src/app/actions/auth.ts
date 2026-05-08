@@ -13,8 +13,19 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   }
 });
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ALLOWED_ROLES = ['admin', 'business_manager', 'employee'];
+
 export async function inviteUser(email: string, role: string, accessToken: string) {
   try {
+    // SECURITY: Input validation
+    if (!email || !EMAIL_REGEX.test(email)) {
+      throw new Error("Invalid email format.");
+    }
+    if (!ALLOWED_ROLES.includes(role)) {
+      throw new Error("Invalid role specified.");
+    }
+
     // SECURE: Verify the caller is authenticated and authorized using the passed token
     const supabase = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
       auth: { persistSession: false },
@@ -56,8 +67,13 @@ export async function inviteUser(email: string, role: string, accessToken: strin
     }
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Invite User Error:", error);
-    return { success: false, message: error.message };
+    // Return a generic error message to the client to avoid leaking DB schema or system internals
+    const isValidationError = error instanceof Error && (error.message === "Invalid email format." || error.message === "Invalid role specified." || error.message === "Forbidden: You do not have permission to invite users.");
+    return {
+      success: false,
+      message: isValidationError && error instanceof Error ? error.message : "An error occurred while inviting the user. Please try again."
+    };
   }
 }

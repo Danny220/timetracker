@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { supabase } from '@/utils/supabase';
 import { useRouter } from 'next/navigation';
-import { Loader2, LayoutDashboard, Briefcase, Plus, Users, BarChart3, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { Loader2, LayoutDashboard, Briefcase, Plus, Users, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 
 interface Activity {
@@ -36,7 +36,7 @@ export default function ManageDashboard() {
   const [reportData, setReportData] = useState<{ user_email: string; project_name: string; total_hours: number; status: string }[]>([]);
   const [reportMonth, setReportMonth] = useState(new Date());
 
-  const [pendingLeaves, setPendingLeaves] = useState<any[]>([]);
+  const [pendingLeaves, setPendingLeaves] = useState<{ id: string; date: string; hours: number; status: string; user: { email: string }; activity: { name: string } }[]>([]);
 
   // Forms state
   const [newProjectName, setNewProjectName] = useState('');
@@ -47,36 +47,6 @@ export default function ManageDashboard() {
 
   const router = useRouter();
 
-  useEffect(() => {
-    async function loadManagerData() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/login');
-        return;
-      }
-
-      // Check role (Admins and Business Managers allowed)
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-      if (!profile || (profile.role !== 'admin' && profile.role !== 'business_manager')) {
-        router.push('/');
-        return;
-      }
-
-      // Load Projects with Activities
-      const { data: projData } = await supabase.from('projects').select('*, activities(*)').order('created_at', { ascending: false });
-      if (projData) setProjects(projData);
-
-      // Load Users
-      const { data: usrData } = await supabase.from('profiles').select('*').order('email', { ascending: true });
-      if (usrData) setUsers(usrData);
-
-      loadReportData(new Date());
-      loadPendingLeaves();
-
-      setLoading(false);
-    }
-    loadManagerData();
-  }, [router]);
 
   const loadPendingLeaves = async () => {
     const { data } = await supabase
@@ -92,7 +62,7 @@ export default function ManageDashboard() {
       .eq('status', 'pending')
       .order('date', { ascending: false });
 
-    if (data) setPendingLeaves(data);
+    if (data) setPendingLeaves(data as unknown as { id: string; date: string; hours: number; status: string; user: { email: string }; activity: { name: string } }[]);
   };
 
   const handleLeaveAction = async (id: string, newStatus: 'approved' | 'rejected') => {
@@ -128,7 +98,7 @@ export default function ManageDashboard() {
       // Grouping logic
       const grouped: Record<string, { user_email: string; project_name: string; total_hours: number; status: string }> = {};
 
-      entries.forEach((e: any) => {
+      (entries as unknown as { user: { email: string }; activity: { project: { name: string } }; status: string; hours: number }[]).forEach((e: { user: { email: string }; activity: { project: { name: string } }; status: string; hours: number }) => {
         const key = `${e.user.email}-${e.activity.project.name}-${e.status}`;
         if (!grouped[key]) {
           grouped[key] = {
@@ -145,6 +115,37 @@ export default function ManageDashboard() {
     }
   };
 
+  useEffect(() => {
+    async function loadManagerData() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
+      // Check role (Admins and Business Managers allowed)
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      if (!profile || (profile.role !== 'admin' && profile.role !== 'business_manager')) {
+        router.push('/');
+        return;
+      }
+
+      // Load Projects with Activities
+      const { data: projData } = await supabase.from('projects').select('*, activities(*)').order('created_at', { ascending: false });
+      if (projData) setProjects(projData);
+
+      // Load Users
+      const { data: usrData } = await supabase.from('profiles').select('*').order('email', { ascending: true });
+      if (usrData) setUsers(usrData);
+
+      loadReportData(new Date());
+      loadPendingLeaves();
+
+      setLoading(false);
+    }
+    loadManagerData();
+  }, [router]);
+
   const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const d = new Date(e.target.value);
     setReportMonth(d);
@@ -155,7 +156,7 @@ export default function ManageDashboard() {
     e.preventDefault();
     if (!newProjectName.trim()) return;
 
-    const { data, error } = await supabase.from('projects').insert([{ name: newProjectName }]).select().single();
+    const { data } = await supabase.from('projects').insert([{ name: newProjectName }]).select().single();
     if (data) {
       setProjects([{ ...data, activities: [] }, ...projects]);
       setNewProjectName('');
@@ -166,7 +167,7 @@ export default function ManageDashboard() {
     e.preventDefault();
     if (!newActivityName.trim()) return;
 
-    const { data, error } = await supabase.from('activities').insert([{ name: newActivityName, project_id: projectId }]).select().single();
+    const { data } = await supabase.from('activities').insert([{ name: newActivityName, project_id: projectId }]).select().single();
     if (data) {
       setProjects(projects.map(p => {
         if (p.id === projectId) {
