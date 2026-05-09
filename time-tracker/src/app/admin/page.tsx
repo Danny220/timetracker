@@ -86,8 +86,9 @@ export default function AdminDashboard() {
             <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white flex items-center space-x-2">
               <SettingsIcon size={20} /> <span>Global Settings</span>
             </h3>
-            <label className="flex items-center space-x-3 cursor-pointer">
+            <label htmlFor="requireApproval" className="flex items-center space-x-3 cursor-pointer">
               <input
+                id="requireApproval"
                 type="checkbox"
                 checked={requireApproval}
                 onChange={handleToggleApproval}
@@ -102,8 +103,9 @@ export default function AdminDashboard() {
             <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Invite New User</h3>
             <form onSubmit={handleInvite} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                <label htmlFor="inviteEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
                 <input
+                  id="inviteEmail"
                   type="email"
                   required
                   value={inviteEmail}
@@ -112,8 +114,9 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+                <label htmlFor="inviteRole" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
                 <select
+                  id="inviteRole"
                   value={inviteRole}
                   onChange={e => setInviteRole(e.target.value)}
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm dark:bg-gray-900 dark:text-white"
