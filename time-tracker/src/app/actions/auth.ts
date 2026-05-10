@@ -56,8 +56,11 @@ export async function inviteUser(email: string, role: string, accessToken: strin
     }
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Invite User Error:", error);
-    return { success: false, message: error.message };
+    if (error instanceof Error) {
+      return { success: false, message: error.message };
+    }
+    return { success: false, message: "An unknown error occurred" };
   }
 }
