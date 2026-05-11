@@ -1,0 +1,14 @@
+
+> time-tracker@0.1.0 dev /app/time-tracker
+> next dev
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+✓ Ready in 565ms
+
+○ Compiling /login ...
+ GET /login 200 in 6.6s (next.js: 5.9s, application-code: 686ms)
+ GET /manage 200 in 2.3s (next.js: 1864ms, application-code: 466ms)
+ GET /login 200 in 82ms (next.js: 6ms, application-code: 75ms)
+ GET /login 200 in 94ms (next.js: 8ms, application-code: 86ms)
