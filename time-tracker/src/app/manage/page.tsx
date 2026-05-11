@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { supabase } from '@/utils/supabase';
 import { useRouter } from 'next/navigation';
-import { Loader2, LayoutDashboard, Briefcase, Plus, Users, BarChart3, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { Loader2, LayoutDashboard, Briefcase, Plus, Users, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 
 interface Activity {
@@ -26,6 +26,15 @@ interface UserProfile {
   role: string;
 }
 
+interface PendingLeave {
+  id: string;
+  date: string;
+  hours: number;
+  status: string;
+  user: { email: string };
+  activity: { name: string };
+}
+
 export default function ManageDashboard() {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -36,7 +45,7 @@ export default function ManageDashboard() {
   const [reportData, setReportData] = useState<{ user_email: string; project_name: string; total_hours: number; status: string }[]>([]);
   const [reportMonth, setReportMonth] = useState(new Date());
 
-  const [pendingLeaves, setPendingLeaves] = useState<any[]>([]);
+  const [pendingLeaves, setPendingLeaves] = useState<PendingLeave[]>([]);
 
   // Forms state
   const [newProjectName, setNewProjectName] = useState('');
@@ -46,6 +55,61 @@ export default function ManageDashboard() {
   const [assignmentMsg, setAssignmentMsg] = useState('');
 
   const router = useRouter();
+
+  async function loadPendingLeaves() {
+    const { data } = await supabase
+      .from('time_entries')
+      .select(`
+        id,
+        date,
+        hours,
+        status,
+        user:profiles!inner(email),
+        activity:activities!inner(name)
+      `)
+      .eq('status', 'pending')
+      .order('date', { ascending: false });
+
+    if (data) setPendingLeaves(data as unknown as PendingLeave[]);
+  }
+
+  async function loadReportData(date: Date) {
+    const startDate = format(startOfMonth(date), 'yyyy-MM-dd');
+    const endDate = format(endOfMonth(date), 'yyyy-MM-dd');
+
+    // In a real application, you'd likely create a Postgres View or RPC for this aggregation.
+    // For this prototype, we'll fetch entries and aggregate client-side to satisfy the constraint quickly.
+    const { data: entries } = await supabase
+      .from('time_entries')
+      .select(`
+        hours,
+        status,
+        user:profiles!inner(email),
+        activity:activities!inner(project:projects!inner(name))
+      `)
+      .gte('date', startDate)
+      .lte('date', endDate);
+
+    if (entries) {
+      // Grouping logic
+      const grouped: Record<string, { user_email: string; project_name: string; total_hours: number; status: string }> = {};
+
+      (entries as unknown as { user: { email: string }, activity: { project: { name: string } }, status: string, hours: number }[]).forEach(e => {
+        const key = `${e.user.email}-${e.activity.project.name}-${e.status}`;
+        if (!grouped[key]) {
+          grouped[key] = {
+            user_email: e.user.email,
+            project_name: e.activity.project.name,
+            total_hours: 0,
+            status: e.status
+          };
+        }
+        grouped[key].total_hours += Number(e.hours);
+      });
+
+      setReportData(Object.values(grouped).sort((a, b) => a.user_email.localeCompare(b.user_email)));
+    }
+  }
 
   useEffect(() => {
     async function loadManagerData() {
@@ -78,23 +142,6 @@ export default function ManageDashboard() {
     loadManagerData();
   }, [router]);
 
-  const loadPendingLeaves = async () => {
-    const { data } = await supabase
-      .from('time_entries')
-      .select(`
-        id,
-        date,
-        hours,
-        status,
-        user:profiles!inner(email),
-        activity:activities!inner(name)
-      `)
-      .eq('status', 'pending')
-      .order('date', { ascending: false });
-
-    if (data) setPendingLeaves(data);
-  };
-
   const handleLeaveAction = async (id: string, newStatus: 'approved' | 'rejected') => {
     const { error } = await supabase
       .from('time_entries')
@@ -104,44 +151,6 @@ export default function ManageDashboard() {
     if (!error) {
       setPendingLeaves(pendingLeaves.filter(leave => leave.id !== id));
       loadReportData(reportMonth); // Refresh reports
-    }
-  };
-
-  const loadReportData = async (date: Date) => {
-    const startDate = format(startOfMonth(date), 'yyyy-MM-dd');
-    const endDate = format(endOfMonth(date), 'yyyy-MM-dd');
-
-    // In a real application, you'd likely create a Postgres View or RPC for this aggregation.
-    // For this prototype, we'll fetch entries and aggregate client-side to satisfy the constraint quickly.
-    const { data: entries } = await supabase
-      .from('time_entries')
-      .select(`
-        hours,
-        status,
-        user:profiles!inner(email),
-        activity:activities!inner(project:projects!inner(name))
-      `)
-      .gte('date', startDate)
-      .lte('date', endDate);
-
-    if (entries) {
-      // Grouping logic
-      const grouped: Record<string, { user_email: string; project_name: string; total_hours: number; status: string }> = {};
-
-      entries.forEach((e: any) => {
-        const key = `${e.user.email}-${e.activity.project.name}-${e.status}`;
-        if (!grouped[key]) {
-          grouped[key] = {
-            user_email: e.user.email,
-            project_name: e.activity.project.name,
-            total_hours: 0,
-            status: e.status
-          };
-        }
-        grouped[key].total_hours += Number(e.hours);
-      });
-
-      setReportData(Object.values(grouped).sort((a, b) => a.user_email.localeCompare(b.user_email)));
     }
   };
 
@@ -155,7 +164,7 @@ export default function ManageDashboard() {
     e.preventDefault();
     if (!newProjectName.trim()) return;
 
-    const { data, error } = await supabase.from('projects').insert([{ name: newProjectName }]).select().single();
+    const { data } = await supabase.from('projects').insert([{ name: newProjectName }]).select().single();
     if (data) {
       setProjects([{ ...data, activities: [] }, ...projects]);
       setNewProjectName('');
@@ -166,7 +175,7 @@ export default function ManageDashboard() {
     e.preventDefault();
     if (!newActivityName.trim()) return;
 
-    const { data, error } = await supabase.from('activities').insert([{ name: newActivityName, project_id: projectId }]).select().single();
+    const { data } = await supabase.from('activities').insert([{ name: newActivityName, project_id: projectId }]).select().single();
     if (data) {
       setProjects(projects.map(p => {
         if (p.id === projectId) {
@@ -233,7 +242,13 @@ export default function ManageDashboard() {
             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
               {projects.map(proj => (
                 <li key={proj.id} className="py-4 flex flex-col">
-                  <div className="flex justify-between items-center cursor-pointer" onClick={() => setExpandedProject(expandedProject === proj.id ? null : proj.id)}>
+                  <button
+                    type="button"
+                    className="flex justify-between items-center w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-md"
+                    onClick={() => setExpandedProject(expandedProject === proj.id ? null : proj.id)}
+                    aria-expanded={expandedProject === proj.id}
+                    aria-controls={`project-activities-${proj.id}`}
+                  >
                     <div className="flex items-center space-x-2">
                       {expandedProject === proj.id ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />}
                       <span className="font-medium text-gray-800 dark:text-gray-200">{proj.name}</span>
@@ -241,10 +256,10 @@ export default function ManageDashboard() {
                     <span className={`text-xs px-2 py-1 rounded-full ${proj.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800'}`}>
                       {proj.status}
                     </span>
-                  </div>
+                  </button>
 
                   {expandedProject === proj.id && (
-                    <div className="mt-4 pl-6 border-l-2 border-gray-200 dark:border-gray-700">
+                    <div id={`project-activities-${proj.id}`} className="mt-4 pl-6 border-l-2 border-gray-200 dark:border-gray-700">
                       <ul className="space-y-2 mb-4">
                         {proj.activities?.map(act => (
                           <li key={act.id} className="text-sm text-gray-600 dark:text-gray-400 flex items-center space-x-2">
