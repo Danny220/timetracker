@@ -319,8 +319,9 @@ export default function ManageDashboard() {
               </h3>
               <form onSubmit={handleAssignUser} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Project</label>
+                  <label htmlFor="assign-project" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Project</label>
                   <select
+                    id="assign-project"
                     value={assignmentProjectId}
                     onChange={e => setAssignmentProjectId(e.target.value)}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm dark:bg-gray-900 dark:text-white"
@@ -331,8 +332,9 @@ export default function ManageDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">User</label>
+                  <label htmlFor="assign-user" className="block text-sm font-medium text-gray-700 dark:text-gray-300">User</label>
                   <select
+                    id="assign-user"
                     value={assignmentUserId}
                     onChange={e => setAssignmentUserId(e.target.value)}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm dark:bg-gray-900 dark:text-white"
