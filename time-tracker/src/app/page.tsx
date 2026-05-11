@@ -7,7 +7,6 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { fetchActivities, fetchTimeEntries, Activity } from '@/utils/api';
 import { supabase } from '@/utils/supabase';
 import { useRouter } from 'next/navigation';
-import { User } from '@supabase/supabase-js';
 import Navbar from '@/components/Navbar';
 
 export default function Home() {

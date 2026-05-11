@@ -8,7 +8,14 @@
 **Learning:** Client-side status assignments in a BaaS (Backend-as-a-Service) environment like Supabase cannot be trusted because users can inspect network requests and spoof API calls. Authorization logic mapping conditions to required statuses must reside on the backend.
 **Prevention:** Use PostgreSQL triggers (and RLS policies if applicable) to enforce server-side business logic and securely override any tampered fields sent by untrusted clients.
 
+<<<<<<< sentinel-fix-error-leakage-in-server-actions-9552861159608305928
 ## 2024-05-09 - Information Exposure and Input Validation Bypass in Server Actions
 **Vulnerability:** The server action `inviteUser` implicitly trusted the `role` and `email` input without validation and exposed database errors via `error.message`. Frontend pages (`src/app/manage/page.tsx`, `src/app/login/page.tsx`) leaked internal database schema or stack trace details directly to users via unstructured error boundary catches.
 **Learning:** Returning `error.message` directly from catch blocks, particularly when interacting with databases or Server Actions, acts as a vector for leaking sensitive architectural constraints or state information to malicious clients.
 **Prevention:** Strictly type-check and validate all primitive inputs within Server Actions manually before executing operations. Enforce generic error mappings mapping unexpected application errors to safe user-facing strings on all catch blocks returning to client interfaces.
+=======
+## 2024-05-11 - Information Leakage via Server Action Exception Handling
+**Vulnerability:** The server action `inviteUser` caught database exceptions (e.g. from Supabase/PostgREST) and directly returned `error.message` to the client. This risked leaking internal schema details, database structure, or internal system state directly to the user if an unanticipated backend failure occurred. Furthermore, the action lacked strict boundary validation on inputs before reaching the database logic.
+**Learning:** Returning unhandled database error messages directly from Next.js server actions exposes the application to Information Leakage (CWE-209). Inputs must be strictly validated before reaching database logic to prevent malformed data from causing unexpected internal errors.
+**Prevention:** Catch detailed database exceptions internally and log them using server-side logging mechanisms (e.g., `console.error`). Always return generic, non-descriptive error messages (e.g. "An unexpected error occurred") to the frontend client. Enforce strict input validation using regular expressions and exact string matching at the very beginning of the server action.
+>>>>>>> main

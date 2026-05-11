@@ -14,6 +14,21 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 export async function inviteUser(email: string, role: string, accessToken: string) {
+  // Input validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email)) {
+    return { success: false, message: 'Invalid email format' };
+  }
+
+  const validRoles = ['admin', 'business_manager', 'employee'];
+  if (!role || !validRoles.includes(role)) {
+    return { success: false, message: 'Invalid role specified' };
+  }
+
+  if (!accessToken || typeof accessToken !== 'string') {
+    return { success: false, message: 'Invalid access token' };
+  }
+
   try {
     // Input validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -67,6 +82,7 @@ export async function inviteUser(email: string, role: string, accessToken: strin
 
     return { success: true };
   } catch (error: unknown) {
+<<<<<<< sentinel-fix-error-leakage-in-server-actions-9552861159608305928
     console.error("Invite User Error:", error);
     const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
 
@@ -76,5 +92,10 @@ export async function inviteUser(email: string, role: string, accessToken: strin
       : "An error occurred while processing the invitation.";
 
     return { success: false, message: safeMessage };
+=======
+    // Log the detailed error internally but don't leak it to the client
+    console.error("Invite User Error:", error);
+    return { success: false, message: "An unexpected error occurred while inviting the user." };
+>>>>>>> main
   }
 }
