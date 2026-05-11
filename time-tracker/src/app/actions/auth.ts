@@ -14,7 +14,32 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 });
 
 export async function inviteUser(email: string, role: string, accessToken: string) {
+  // Input validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!email || !emailRegex.test(email)) {
+    return { success: false, message: 'Invalid email format' };
+  }
+
+  const validRoles = ['admin', 'business_manager', 'employee'];
+  if (!role || !validRoles.includes(role)) {
+    return { success: false, message: 'Invalid role specified' };
+  }
+
+  if (!accessToken || typeof accessToken !== 'string') {
+    return { success: false, message: 'Invalid access token' };
+  }
+
   try {
+    // Input validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      throw new Error("Invalid email format.");
+    }
+    const allowedRoles = ['admin', 'business_manager', 'employee'];
+    if (!role || !allowedRoles.includes(role)) {
+      throw new Error("Invalid role specified.");
+    }
+
     // SECURE: Verify the caller is authenticated and authorized using the passed token
     const supabase = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
       auth: { persistSession: false },
@@ -57,7 +82,8 @@ export async function inviteUser(email: string, role: string, accessToken: strin
 
     return { success: true };
   } catch (error: unknown) {
+    // Log the detailed error internally but don't leak it to the client
     console.error("Invite User Error:", error);
-    return { success: false, message: 'An unexpected error occurred while inviting the user.' };
+    return { success: false, message: "An unexpected error occurred while inviting the user." };
   }
 }

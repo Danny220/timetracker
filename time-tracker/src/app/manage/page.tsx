@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { supabase } from '@/utils/supabase';
 import { useRouter } from 'next/navigation';
-import { Loader2, LayoutDashboard, Briefcase, Plus, Users, BarChart3, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { Loader2, LayoutDashboard, Briefcase, Plus, Users, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 
 interface Activity {
@@ -26,6 +26,15 @@ interface UserProfile {
   role: string;
 }
 
+interface PendingLeave {
+  id: string;
+  date: string;
+  hours: number;
+  status: string;
+  user: { email: string };
+  activity: { name: string };
+}
+
 export default function ManageDashboard() {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -36,7 +45,7 @@ export default function ManageDashboard() {
   const [reportData, setReportData] = useState<{ user_email: string; project_name: string; total_hours: number; status: string }[]>([]);
   const [reportMonth, setReportMonth] = useState(new Date());
 
-  const [pendingLeaves, setPendingLeaves] = useState<any[]>([]);
+  const [pendingLeaves, setPendingLeaves] = useState<PendingLeave[]>([]);
 
   // Forms state
   const [newProjectName, setNewProjectName] = useState('');
@@ -134,12 +143,19 @@ export default function ManageDashboard() {
       // Grouping logic
       const grouped: Record<string, { user_email: string; project_name: string; total_hours: number; status: string }> = {};
 
+      entries.forEach((e: { user: { email: string }, activity: { project: { name: string } }, status: string, hours: number }) => {
       entries.forEach((e: any) => {
+        const uEmail = Array.isArray(e.user) ? e.user[0]?.email : e.user?.email || 'Unknown User';
+        const pName = Array.isArray(e.activity)
+          ? (Array.isArray(e.activity[0]?.project) ? e.activity[0]?.project[0]?.name : e.activity[0]?.project?.name)
+          : (Array.isArray(e.activity?.project) ? e.activity.project[0]?.name : e.activity?.project?.name) || 'Unknown Project';
+
+        const key = `${uEmail}-${pName}-${e.status}`;
         const key = `${e.user.email}-${e.activity.project.name}-${e.status}`;
         if (!grouped[key]) {
           grouped[key] = {
-            user_email: e.user.email,
-            project_name: e.activity.project.name,
+            user_email: uEmail,
+            project_name: pName,
             total_hours: 0,
             status: e.status
           };
@@ -147,7 +163,96 @@ export default function ManageDashboard() {
         grouped[key].total_hours += Number(e.hours);
       });
 
-      setReportData(Object.values(grouped).sort((a, b) => a.user_email.localeCompare(b.user_email)));
+      setReportData(Object.values(grouped).sort((a, b) => b.total_hours - a.total_hours));
+    } else {
+      setReportData([]);
+    }
+  }
+
+  useEffect(() => {
+    async function loadManagerData() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
+      // Check role (Admins and Business Managers allowed)
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      if (!profile || (profile.role !== 'admin' && profile.role !== 'business_manager')) {
+        router.push('/');
+        return;
+      }
+
+      // Load Projects with Activities
+      const { data: projData } = await supabase.from('projects').select('*, activities(*)').order('created_at', { ascending: false });
+      if (projData) setProjects(projData);
+
+      // Load Users
+      const { data: usrData } = await supabase.from('profiles').select('*').order('email', { ascending: true });
+      if (usrData) setUsers(usrData);
+
+      loadReportData(new Date());
+      loadPendingLeaves();
+
+      setLoading(false);
+    }
+    loadManagerData();
+  }, [router]);
+
+  const handleLeaveAction = async (id: string, newStatus: 'approved' | 'rejected') => {
+    const { error } = await supabase
+      .from('time_entries')
+      .update({ status: newStatus })
+      .eq('id', id);
+
+    if (!error) {
+      setPendingLeaves(pendingLeaves.filter(leave => leave.id !== id));
+      loadReportData(reportMonth); // Refresh reports
+    }
+  };
+
+  useEffect(() => {
+    async function loadManagerData() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
+      // Check role (Admins and Business Managers allowed)
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      if (!profile || (profile.role !== 'admin' && profile.role !== 'business_manager')) {
+        router.push('/');
+        return;
+      }
+
+      // Load Projects with Activities
+      const { data: projData } = await supabase.from('projects').select('*, activities(*)').order('created_at', { ascending: false });
+      if (projData) setProjects(projData);
+
+      // Load Users
+      const { data: usrData } = await supabase.from('profiles').select('*').order('email', { ascending: true });
+      if (usrData) setUsers(usrData);
+
+      loadReportData(new Date());
+      loadPendingLeaves();
+
+      setLoading(false);
+    }
+    loadManagerData();
+
+  }, [router]);
+
+  const handleLeaveAction = async (id: string, newStatus: 'approved' | 'rejected') => {
+    const { error } = await supabase
+      .from('time_entries')
+      .update({ status: newStatus })
+      .eq('id', id);
+
+    if (!error) {
+      setPendingLeaves(pendingLeaves.filter(leave => leave.id !== id));
+      loadReportData(reportMonth); // Refresh reports
     }
   }, []);
 
@@ -161,7 +266,7 @@ export default function ManageDashboard() {
     e.preventDefault();
     if (!newProjectName.trim()) return;
 
-    const { data, error } = await supabase.from('projects').insert([{ name: newProjectName }]).select().single();
+    const { data } = await supabase.from('projects').insert([{ name: newProjectName }]).select().single();
     if (data) {
       setProjects([{ ...data, activities: [] }, ...projects]);
       setNewProjectName('');
@@ -175,7 +280,7 @@ export default function ManageDashboard() {
     e.preventDefault();
     if (!newActivityName.trim()) return;
 
-    const { data, error } = await supabase.from('activities').insert([{ name: newActivityName, project_id: projectId }]).select().single();
+    const { data } = await supabase.from('activities').insert([{ name: newActivityName, project_id: projectId }]).select().single();
     if (data) {
       setProjects(projects.map(p => {
         if (p.id === projectId) {
@@ -245,7 +350,13 @@ export default function ManageDashboard() {
             <ul className="divide-y divide-gray-200 dark:divide-gray-700">
               {projects.map(proj => (
                 <li key={proj.id} className="py-4 flex flex-col">
-                  <div className="flex justify-between items-center cursor-pointer" onClick={() => setExpandedProject(expandedProject === proj.id ? null : proj.id)}>
+                  <button
+                    type="button"
+                    className="flex justify-between items-center w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-md"
+                    onClick={() => setExpandedProject(expandedProject === proj.id ? null : proj.id)}
+                    aria-expanded={expandedProject === proj.id}
+                    aria-controls={`project-activities-${proj.id}`}
+                  >
                     <div className="flex items-center space-x-2">
                       {expandedProject === proj.id ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />}
                       <span className="font-medium text-gray-800 dark:text-gray-200">{proj.name}</span>
@@ -253,10 +364,10 @@ export default function ManageDashboard() {
                     <span className={`text-xs px-2 py-1 rounded-full ${proj.status === 'Active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-gray-100 text-gray-800'}`}>
                       {proj.status}
                     </span>
-                  </div>
+                  </button>
 
                   {expandedProject === proj.id && (
-                    <div className="mt-4 pl-6 border-l-2 border-gray-200 dark:border-gray-700">
+                    <div id={`project-activities-${proj.id}`} className="mt-4 pl-6 border-l-2 border-gray-200 dark:border-gray-700">
                       <ul className="space-y-2 mb-4">
                         {proj.activities?.map(act => (
                           <li key={act.id} className="text-sm text-gray-600 dark:text-gray-400 flex items-center space-x-2">
@@ -331,8 +442,9 @@ export default function ManageDashboard() {
               </h3>
               <form onSubmit={handleAssignUser} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Project</label>
+                  <label htmlFor="assign-project" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Project</label>
                   <select
+                    id="assign-project"
                     value={assignmentProjectId}
                     onChange={e => setAssignmentProjectId(e.target.value)}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm dark:bg-gray-900 dark:text-white"
@@ -343,8 +455,9 @@ export default function ManageDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">User</label>
+                  <label htmlFor="assign-user" className="block text-sm font-medium text-gray-700 dark:text-gray-300">User</label>
                   <select
+                    id="assign-user"
                     value={assignmentUserId}
                     onChange={e => setAssignmentUserId(e.target.value)}
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm dark:bg-gray-900 dark:text-white"
