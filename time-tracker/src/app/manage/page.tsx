@@ -47,37 +47,7 @@ export default function ManageDashboard() {
 
   const router = useRouter();
 
-  useEffect(() => {
-    async function loadManagerData() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/login');
-        return;
-      }
-
-      // Check role (Admins and Business Managers allowed)
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-      if (!profile || (profile.role !== 'admin' && profile.role !== 'business_manager')) {
-        router.push('/');
-        return;
-      }
-
-      // Load Projects with Activities
-      const { data: projData } = await supabase.from('projects').select('*, activities(*)').order('created_at', { ascending: false });
-      if (projData) setProjects(projData);
-
-      // Load Users
-      const { data: usrData } = await supabase.from('profiles').select('*').order('email', { ascending: true });
-      if (usrData) setUsers(usrData);
-
-      loadReportData(new Date());
-      loadPendingLeaves();
-
-      setLoading(false);
-    }
-    loadManagerData();
-  }, [router]);
-
+  // Define these before useEffect to prevent "accessed before it is declared" linting errors
   const loadPendingLeaves = async () => {
     const { data } = await supabase
       .from('time_entries')
@@ -129,11 +99,16 @@ export default function ManageDashboard() {
       const grouped: Record<string, { user_email: string; project_name: string; total_hours: number; status: string }> = {};
 
       entries.forEach((e: any) => {
-        const key = `${e.user.email}-${e.activity.project.name}-${e.status}`;
+        const uEmail = Array.isArray(e.user) ? e.user[0]?.email : e.user?.email || 'Unknown User';
+        const pName = Array.isArray(e.activity)
+          ? (Array.isArray(e.activity[0]?.project) ? e.activity[0]?.project[0]?.name : e.activity[0]?.project?.name)
+          : (Array.isArray(e.activity?.project) ? e.activity.project[0]?.name : e.activity?.project?.name) || 'Unknown Project';
+
+        const key = `${uEmail}-${pName}-${e.status}`;
         if (!grouped[key]) {
           grouped[key] = {
-            user_email: e.user.email,
-            project_name: e.activity.project.name,
+            user_email: uEmail,
+            project_name: pName,
             total_hours: 0,
             status: e.status
           };
@@ -141,9 +116,45 @@ export default function ManageDashboard() {
         grouped[key].total_hours += Number(e.hours);
       });
 
-      setReportData(Object.values(grouped).sort((a, b) => a.user_email.localeCompare(b.user_email)));
+      setReportData(Object.values(grouped).sort((a, b) => b.total_hours - a.total_hours));
+    } else {
+      setReportData([]);
     }
   };
+
+  useEffect(() => {
+    async function loadManagerData() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
+
+      // Check role (Admins and Business Managers allowed)
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
+      if (!profile || (profile.role !== 'admin' && profile.role !== 'business_manager')) {
+        router.push('/');
+        return;
+      }
+
+      // Load Projects with Activities
+      const { data: projData } = await supabase.from('projects').select('*, activities(*)').order('created_at', { ascending: false });
+      if (projData) setProjects(projData);
+
+      // Load Users
+      const { data: usrData } = await supabase.from('profiles').select('*').order('email', { ascending: true });
+      if (usrData) setUsers(usrData);
+
+      loadReportData(new Date());
+      loadPendingLeaves();
+
+      setLoading(false);
+    }
+    loadManagerData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
+
+
 
   const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const d = new Date(e.target.value);
@@ -187,7 +198,7 @@ export default function ManageDashboard() {
 
     if (error) {
       if (error.code === '23505') setAssignmentMsg('User is already assigned to this project.');
-      else setAssignmentMsg(error.message);
+      else setAssignmentMsg('An error occurred during assignment.');
     } else {
       setAssignmentMsg('Successfully assigned.');
     }

@@ -15,6 +15,16 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 
 export async function inviteUser(email: string, role: string, accessToken: string) {
   try {
+    // Input validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      throw new Error("Invalid email format.");
+    }
+    const allowedRoles = ['admin', 'business_manager', 'employee'];
+    if (!role || !allowedRoles.includes(role)) {
+      throw new Error("Invalid role specified.");
+    }
+
     // SECURE: Verify the caller is authenticated and authorized using the passed token
     const supabase = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
       auth: { persistSession: false },
@@ -56,8 +66,15 @@ export async function inviteUser(email: string, role: string, accessToken: strin
     }
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Invite User Error:", error);
-    return { success: false, message: error.message };
+    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+
+    // Do not leak sensitive database/auth errors directly to the client
+    const safeMessage = errorMessage.includes("Forbidden") || errorMessage.includes("Invalid") || errorMessage.includes("Unauthorized")
+      ? errorMessage
+      : "An error occurred while processing the invitation.";
+
+    return { success: false, message: safeMessage };
   }
 }

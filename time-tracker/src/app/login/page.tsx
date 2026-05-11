@@ -26,8 +26,12 @@ export default function Login() {
 
       router.push('/');
       router.refresh();
-    } catch (error: any) {
-      setErrorMsg(error.message || 'An error occurred during authentication.');
+    } catch (error: unknown) {
+      if (error instanceof Error && (error.message.includes('Invalid login credentials') || error.message.includes('Email not confirmed'))) {
+        setErrorMsg(error.message);
+      } else {
+        setErrorMsg('An error occurred during authentication.');
+      }
     } finally {
       setLoading(false);
     }

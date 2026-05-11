@@ -7,3 +7,8 @@
 **Vulnerability:** Regular employees could bypass leave approval policies by manually setting the `status` field to `'approved'` when upserting time entries via the Supabase client.
 **Learning:** Client-side status assignments in a BaaS (Backend-as-a-Service) environment like Supabase cannot be trusted because users can inspect network requests and spoof API calls. Authorization logic mapping conditions to required statuses must reside on the backend.
 **Prevention:** Use PostgreSQL triggers (and RLS policies if applicable) to enforce server-side business logic and securely override any tampered fields sent by untrusted clients.
+
+## 2024-05-09 - Information Exposure and Input Validation Bypass in Server Actions
+**Vulnerability:** The server action `inviteUser` implicitly trusted the `role` and `email` input without validation and exposed database errors via `error.message`. Frontend pages (`src/app/manage/page.tsx`, `src/app/login/page.tsx`) leaked internal database schema or stack trace details directly to users via unstructured error boundary catches.
+**Learning:** Returning `error.message` directly from catch blocks, particularly when interacting with databases or Server Actions, acts as a vector for leaking sensitive architectural constraints or state information to malicious clients.
+**Prevention:** Strictly type-check and validate all primitive inputs within Server Actions manually before executing operations. Enforce generic error mappings mapping unexpected application errors to safe user-facing strings on all catch blocks returning to client interfaces.
