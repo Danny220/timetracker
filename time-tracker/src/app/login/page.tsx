@@ -26,8 +26,12 @@ export default function Login() {
 
       router.push('/');
       router.refresh();
-    } catch (error: any) {
-      setErrorMsg(error.message || 'An error occurred during authentication.');
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setErrorMsg(error.message);
+      } else {
+        setErrorMsg('An error occurred during authentication.');
+      }
     } finally {
       setLoading(false);
     }
@@ -53,9 +57,10 @@ export default function Login() {
         <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-gray-200 dark:border-gray-700">
           <form className="space-y-6" onSubmit={handleAuth}>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email address</label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email address</label>
               <div className="mt-1">
                 <input
+                  id="email"
                   type="email"
                   required
                   value={email}
@@ -66,9 +71,10 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
               <div className="mt-1">
                 <input
+                  id="password"
                   type="password"
                   required
                   value={password}

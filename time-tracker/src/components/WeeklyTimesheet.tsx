@@ -37,22 +37,14 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
     setEntries(existingEntries || {});
   }, [existingEntries]);
 
-  // Generate an array of 7 dates for the week with pre-computed expensive formatting and logic
-  const weekDaysInfo = useMemo(() => {
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
+  // Generate an array of 7 date descriptors for the week to prevent expensive re-calculations on every render
+  const weekDayDescriptors = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => {
       const date = addDays(weekStartDate, i);
       const dateStr = format(date, 'yyyy-MM-dd');
       const { isNonWorking, reason } = isNonWorkingDay(dateStr);
-      const isToday = todayStr === dateStr;
 
-      return {
-        date,
-        dateStr,
-        isNonWorking,
-        reason,
-        isToday
-      };
+      return { date, dateStr, isNonWorking, reason };
     });
   }, [weekStartDate]);
 
@@ -60,7 +52,7 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
     const conflicts: { date: string; reason: string | null }[] = [];
     const newEntries = { ...entries };
 
-    weekDaysInfo.forEach(({ dateStr, isNonWorking, reason }) => {
+    weekDayDescriptors.forEach(({ dateStr, isNonWorking, reason }) => {
       // Skip if already has hours
       if (newEntries[dateStr] && Number(newEntries[dateStr]) > 0) return;
 
@@ -199,7 +191,8 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
 
       {/* Grid Cells */}
       <div className="w-3/4 grid grid-cols-7">
-        {weekDaysInfo.map(({ dateStr, isNonWorking, isToday }) => {
+        {weekDayDescriptors.map(({ dateStr, isNonWorking }) => {
+          const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
           const status = savingStatus[dateStr];
 
           return (
