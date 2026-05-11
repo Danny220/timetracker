@@ -4,7 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // Server-side only: requires the service role key to bypass RLS and use admin methods
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'service-role-key-placeholder';
+// Check for SUPABASE_SECRET_KEY as well, as some versions / docs refer to it that way
+const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || 'service-role-key-placeholder';
 
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
@@ -16,7 +17,7 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 export async function inviteUser(email: string, role: string, accessToken: string) {
   try {
     if (supabaseServiceKey === 'service-role-key-placeholder') {
-      throw new Error("Server configuration error: SUPABASE_SERVICE_ROLE_KEY is missing. You cannot invite users until the admin sets this variable.");
+      throw new Error("Server configuration error: SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY) is missing. You cannot invite users until the admin sets this variable.");
     }
 
     // SECURE: Verify the caller is authenticated and authorized using the passed token
