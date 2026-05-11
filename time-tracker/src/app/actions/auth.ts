@@ -82,20 +82,8 @@ export async function inviteUser(email: string, role: string, accessToken: strin
 
     return { success: true };
   } catch (error: unknown) {
-<<<<<<< sentinel-fix-error-leakage-in-server-actions-9552861159608305928
-    console.error("Invite User Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
-
-    // Do not leak sensitive database/auth errors directly to the client
-    const safeMessage = errorMessage.includes("Forbidden") || errorMessage.includes("Invalid") || errorMessage.includes("Unauthorized")
-      ? errorMessage
-      : "An error occurred while processing the invitation.";
-
-    return { success: false, message: safeMessage };
-=======
     // Log the detailed error internally but don't leak it to the client
     console.error("Invite User Error:", error);
     return { success: false, message: "An unexpected error occurred while inviting the user." };
->>>>>>> main
   }
 }

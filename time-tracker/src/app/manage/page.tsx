@@ -56,7 +56,6 @@ export default function ManageDashboard() {
 
   const router = useRouter();
 
-  // Define these before useEffect to prevent "accessed before it is declared" linting errors
   const loadPendingLeaves = async () => {
     const { data } = await supabase
       .from('time_entries')
@@ -71,10 +70,10 @@ export default function ManageDashboard() {
       .eq('status', 'pending')
       .order('date', { ascending: false });
 
-    if (data) setPendingLeaves(data as unknown as PendingLeave[]);
-  }
+    if (data) setPendingLeaves(data);
+  };
 
-  async function loadReportData(date: Date) {
+  const loadReportData = async (date: Date) => {
     const startDate = format(startOfMonth(date), 'yyyy-MM-dd');
     const endDate = format(endOfMonth(date), 'yyyy-MM-dd');
 
@@ -95,7 +94,7 @@ export default function ManageDashboard() {
       // Grouping logic
       const grouped: Record<string, { user_email: string; project_name: string; total_hours: number; status: string }> = {};
 
-<<<<<<< sentinel-fix-error-leakage-in-server-actions-9552861159608305928
+      entries.forEach((e: { user: { email: string }, activity: { project: { name: string } }, status: string, hours: number }) => {
       entries.forEach((e: any) => {
         const uEmail = Array.isArray(e.user) ? e.user[0]?.email : e.user?.email || 'Unknown User';
         const pName = Array.isArray(e.activity)
@@ -103,10 +102,7 @@ export default function ManageDashboard() {
           : (Array.isArray(e.activity?.project) ? e.activity.project[0]?.name : e.activity?.project?.name) || 'Unknown Project';
 
         const key = `${uEmail}-${pName}-${e.status}`;
-=======
-      (entries as unknown as { user: { email: string }, activity: { project: { name: string } }, status: string, hours: number }[]).forEach(e => {
         const key = `${e.user.email}-${e.activity.project.name}-${e.status}`;
->>>>>>> main
         if (!grouped[key]) {
           grouped[key] = {
             user_email: uEmail,
@@ -196,10 +192,20 @@ export default function ManageDashboard() {
       setLoading(false);
     }
     loadManagerData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [router]);
 
+  const handleLeaveAction = async (id: string, newStatus: 'approved' | 'rejected') => {
+    const { error } = await supabase
+      .from('time_entries')
+      .update({ status: newStatus })
+      .eq('id', id);
 
+    if (!error) {
+      setPendingLeaves(pendingLeaves.filter(leave => leave.id !== id));
+      loadReportData(reportMonth); // Refresh reports
+    }
+  };
 
   const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const d = new Date(e.target.value);
