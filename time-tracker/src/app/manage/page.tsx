@@ -70,15 +70,15 @@ export default function ManageDashboard() {
       const { data: usrData } = await supabase.from('profiles').select('*').order('email', { ascending: true });
       if (usrData) setUsers(usrData);
 
-      loadReportData(new Date());
-      loadPendingLeaves();
+      await loadReportData(new Date());
+      await loadPendingLeaves();
 
       setLoading(false);
     }
     loadManagerData();
-  }, [router]);
+  }, [router, loadReportData, loadPendingLeaves]);
 
-  const loadPendingLeaves = async () => {
+  const loadPendingLeaves = React.useCallback(async () => {
     const { data } = await supabase
       .from('time_entries')
       .select(`
@@ -92,8 +92,14 @@ export default function ManageDashboard() {
       .eq('status', 'pending')
       .order('date', { ascending: false });
 
-    if (data) setPendingLeaves(data);
-  };
+    if (data) {
+      setPendingLeaves((data as unknown as { id: string, date: string, hours: number, status: string, user: { email?: string } | { email?: string }[], activity: { name?: string } | { name?: string }[] }[]).map((d) => ({
+        ...d,
+        user: { email: Array.isArray(d.user) ? d.user[0]?.email || '' : d.user?.email || '' },
+        activity: { name: Array.isArray(d.activity) ? d.activity[0]?.name || '' : d.activity?.name || '' }
+      })));
+    }
+  }, []);
 
   const handleLeaveAction = async (id: string, newStatus: 'approved' | 'rejected') => {
     const { error } = await supabase
@@ -107,7 +113,7 @@ export default function ManageDashboard() {
     }
   };
 
-  const loadReportData = async (date: Date) => {
+  const loadReportData = React.useCallback(async (date: Date) => {
     const startDate = format(startOfMonth(date), 'yyyy-MM-dd');
     const endDate = format(endOfMonth(date), 'yyyy-MM-dd');
 
@@ -143,7 +149,7 @@ export default function ManageDashboard() {
 
       setReportData(Object.values(grouped).sort((a, b) => a.user_email.localeCompare(b.user_email)));
     }
-  };
+  }, []);
 
   const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const d = new Date(e.target.value);
@@ -159,6 +165,9 @@ export default function ManageDashboard() {
     if (data) {
       setProjects([{ ...data, activities: [] }, ...projects]);
       setNewProjectName('');
+    } else if (error) {
+      setAssignmentMsg('An error occurred while creating the project.');
+      setTimeout(() => setAssignmentMsg(''), 3000);
     }
   };
 
@@ -175,6 +184,9 @@ export default function ManageDashboard() {
         return p;
       }));
       setNewActivityName('');
+    } else if (error) {
+      setAssignmentMsg('An error occurred while creating the activity.');
+      setTimeout(() => setAssignmentMsg(''), 3000);
     }
   };
 
@@ -187,7 +199,7 @@ export default function ManageDashboard() {
 
     if (error) {
       if (error.code === '23505') setAssignmentMsg('User is already assigned to this project.');
-      else setAssignmentMsg(error.message);
+      else setAssignmentMsg('An error occurred while assigning the user.');
     } else {
       setAssignmentMsg('Successfully assigned.');
     }
