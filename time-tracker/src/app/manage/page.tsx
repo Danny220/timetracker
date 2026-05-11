@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { supabase } from '@/utils/supabase';
 import { useRouter } from 'next/navigation';
-import { Loader2, LayoutDashboard, Briefcase, Plus, Users, BarChart3, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { Loader2, LayoutDashboard, Briefcase, Plus, Users, BarChart3, ChevronDown, ChevronUp } from 'lucide-react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 
 interface Activity {
@@ -36,7 +36,14 @@ export default function ManageDashboard() {
   const [reportData, setReportData] = useState<{ user_email: string; project_name: string; total_hours: number; status: string }[]>([]);
   const [reportMonth, setReportMonth] = useState(new Date());
 
-  const [pendingLeaves, setPendingLeaves] = useState<any[]>([]);
+  const [pendingLeaves, setPendingLeaves] = useState<{
+    id: string;
+    date: string;
+    hours: number;
+    status: string;
+    user: { email: string };
+    activity: { name: string };
+  }[]>([]);
 
   // Forms state
   const [newProjectName, setNewProjectName] = useState('');
@@ -46,6 +53,61 @@ export default function ManageDashboard() {
   const [assignmentMsg, setAssignmentMsg] = useState('');
 
   const router = useRouter();
+
+  const loadPendingLeaves = async () => {
+    const { data } = await supabase
+      .from('time_entries')
+      .select(`
+        id,
+        date,
+        hours,
+        status,
+        user:profiles!inner(email),
+        activity:activities!inner(name)
+      `)
+      .eq('status', 'pending')
+      .order('date', { ascending: false });
+
+    if (data) setPendingLeaves(data);
+  };
+
+  const loadReportData = async (date: Date) => {
+    const startDate = format(startOfMonth(date), 'yyyy-MM-dd');
+    const endDate = format(endOfMonth(date), 'yyyy-MM-dd');
+
+    // In a real application, you'd likely create a Postgres View or RPC for this aggregation.
+    // For this prototype, we'll fetch entries and aggregate client-side to satisfy the constraint quickly.
+    const { data: entries } = await supabase
+      .from('time_entries')
+      .select(`
+        hours,
+        status,
+        user:profiles!inner(email),
+        activity:activities!inner(project:projects!inner(name))
+      `)
+      .gte('date', startDate)
+      .lte('date', endDate);
+
+    if (entries) {
+      // Grouping logic
+      const grouped: Record<string, { user_email: string; project_name: string; total_hours: number; status: string }> = {};
+
+      entries.forEach((e: { user: { email: string }, activity: { project: { name: string } }, status: string, hours: number }) => {
+        const key = `${e.user.email}-${e.activity.project.name}-${e.status}`;
+        if (!grouped[key]) {
+          grouped[key] = {
+            user_email: e.user.email,
+            project_name: e.activity.project.name,
+            total_hours: 0,
+            status: e.status
+          };
+        }
+        grouped[key].total_hours += Number(e.hours);
+      });
+
+      setReportData(Object.values(grouped).sort((a, b) => a.user_email.localeCompare(b.user_email)));
+    }
+  };
 
   useEffect(() => {
     async function loadManagerData() {
@@ -76,24 +138,8 @@ export default function ManageDashboard() {
       setLoading(false);
     }
     loadManagerData();
+
   }, [router]);
-
-  const loadPendingLeaves = async () => {
-    const { data } = await supabase
-      .from('time_entries')
-      .select(`
-        id,
-        date,
-        hours,
-        status,
-        user:profiles!inner(email),
-        activity:activities!inner(name)
-      `)
-      .eq('status', 'pending')
-      .order('date', { ascending: false });
-
-    if (data) setPendingLeaves(data);
-  };
 
   const handleLeaveAction = async (id: string, newStatus: 'approved' | 'rejected') => {
     const { error } = await supabase
@@ -107,44 +153,6 @@ export default function ManageDashboard() {
     }
   };
 
-  const loadReportData = async (date: Date) => {
-    const startDate = format(startOfMonth(date), 'yyyy-MM-dd');
-    const endDate = format(endOfMonth(date), 'yyyy-MM-dd');
-
-    // In a real application, you'd likely create a Postgres View or RPC for this aggregation.
-    // For this prototype, we'll fetch entries and aggregate client-side to satisfy the constraint quickly.
-    const { data: entries } = await supabase
-      .from('time_entries')
-      .select(`
-        hours,
-        status,
-        user:profiles!inner(email),
-        activity:activities!inner(project:projects!inner(name))
-      `)
-      .gte('date', startDate)
-      .lte('date', endDate);
-
-    if (entries) {
-      // Grouping logic
-      const grouped: Record<string, { user_email: string; project_name: string; total_hours: number; status: string }> = {};
-
-      entries.forEach((e: any) => {
-        const key = `${e.user.email}-${e.activity.project.name}-${e.status}`;
-        if (!grouped[key]) {
-          grouped[key] = {
-            user_email: e.user.email,
-            project_name: e.activity.project.name,
-            total_hours: 0,
-            status: e.status
-          };
-        }
-        grouped[key].total_hours += Number(e.hours);
-      });
-
-      setReportData(Object.values(grouped).sort((a, b) => a.user_email.localeCompare(b.user_email)));
-    }
-  };
-
   const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const d = new Date(e.target.value);
     setReportMonth(d);
@@ -155,7 +163,7 @@ export default function ManageDashboard() {
     e.preventDefault();
     if (!newProjectName.trim()) return;
 
-    const { data, error } = await supabase.from('projects').insert([{ name: newProjectName }]).select().single();
+    const { data } = await supabase.from('projects').insert([{ name: newProjectName }]).select().single();
     if (data) {
       setProjects([{ ...data, activities: [] }, ...projects]);
       setNewProjectName('');
@@ -166,7 +174,7 @@ export default function ManageDashboard() {
     e.preventDefault();
     if (!newActivityName.trim()) return;
 
-    const { data, error } = await supabase.from('activities').insert([{ name: newActivityName, project_id: projectId }]).select().single();
+    const { data } = await supabase.from('activities').insert([{ name: newActivityName, project_id: projectId }]).select().single();
     if (data) {
       setProjects(projects.map(p => {
         if (p.id === projectId) {

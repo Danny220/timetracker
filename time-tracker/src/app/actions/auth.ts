@@ -56,8 +56,8 @@ export async function inviteUser(email: string, role: string, accessToken: strin
     }
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Invite User Error:", error);
-    return { success: false, message: error.message };
+    return { success: false, message: "An error occurred while inviting the user." };
   }
 }

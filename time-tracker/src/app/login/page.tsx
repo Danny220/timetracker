@@ -26,8 +26,9 @@ export default function Login() {
 
       router.push('/');
       router.refresh();
-    } catch (error: any) {
-      setErrorMsg(error.message || 'An error occurred during authentication.');
+    } catch (error) {
+      const e = error as Error;
+      setErrorMsg(e.message || 'An error occurred during authentication.');
     } finally {
       setLoading(false);
     }
