@@ -201,6 +201,7 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
               className={`relative p-2 border-r border-gray-200 last:border-r-0 flex flex-col justify-center items-center ${isNonWorking ? 'bg-gray-100/60' : 'bg-transparent'} ${isToday ? 'bg-blue-50/30' : ''}`}
             >
               <input
+                aria-label={`Hours for ${format(new Date(dateStr), 'MMM d')} on ${activity.name}`}
                 type="number"
                 min="0"
                 max="24"
@@ -208,7 +209,7 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
                 value={entries[dateStr] || ''}
                 onChange={(e) => handleInputChange(dateStr, e.target.value)}
                 onBlur={(e) => handleInputBlur(dateStr, e.target.value)}
-                className={`w-full text-center bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-400 rounded p-1 ${isNonWorking && entries[dateStr] ? 'text-orange-600 font-semibold' : 'text-gray-800'}`}
+                className={`w-full text-center bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded p-1 ${isNonWorking && entries[dateStr] ? 'text-orange-600 font-semibold' : 'text-gray-800'}`}
                 placeholder="-"
               />
               {status === 'saving' && <Loader2 size={12} className="absolute bottom-1 right-1 text-gray-400 animate-spin" />}

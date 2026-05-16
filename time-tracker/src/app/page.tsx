@@ -184,6 +184,7 @@ export default function Home() {
             {/* Add Row Button */}
             <div className="p-4 border-b border-gray-200">
               <select
+                aria-label="Add Project or Leave"
                 onChange={(e) => {
                   handleAddRow(e.target.value);
                   e.target.value = "";
