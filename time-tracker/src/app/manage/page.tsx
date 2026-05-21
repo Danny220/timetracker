@@ -56,6 +56,75 @@ export default function ManageDashboard() {
 
   const router = useRouter();
 
+  const loadPendingLeaves = React.useCallback(async () => {
+    const { data } = await supabase
+      .from('time_entries')
+      .select(`
+        id,
+        date,
+        hours,
+        status,
+        user:profiles!inner(email),
+        activity:activities!inner(name)
+      `)
+      .eq('status', 'pending')
+      .order('date', { ascending: false });
+
+    if (data) {
+      setPendingLeaves((data as unknown as { id: string, date: string, hours: number, status: string, user: { email?: string } | { email?: string }[], activity: { name?: string } | { name?: string }[] }[]).map((d) => ({
+        ...d,
+        user: { email: Array.isArray(d.user) ? d.user[0]?.email || '' : d.user?.email || '' },
+        activity: { name: Array.isArray(d.activity) ? d.activity[0]?.name || '' : d.activity?.name || '' }
+      })));
+    }
+  }, []);
+
+  const loadReportData = React.useCallback(async (date: Date) => {
+    const startDate = format(startOfMonth(date), 'yyyy-MM-dd');
+    const endDate = format(endOfMonth(date), 'yyyy-MM-dd');
+
+    // In a real application, you'd likely create a Postgres View or RPC for this aggregation.
+    // For this prototype, we'll fetch entries and aggregate client-side to satisfy the constraint quickly.
+    const { data: entries } = await supabase
+      .from('time_entries')
+      .select(`
+        hours,
+        status,
+        user:profiles!inner(email),
+        activity:activities!inner(project:projects!inner(name))
+      `)
+      .gte('date', startDate)
+      .lte('date', endDate);
+
+    if (entries) {
+      // Grouping logic
+      const grouped: Record<string, { user_email: string; project_name: string; total_hours: number; status: string }> = {};
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      entries.forEach((e: any) => {
+        const uEmail = Array.isArray(e.user) ? e.user[0]?.email : e.user?.email || 'Unknown User';
+        const pName = Array.isArray(e.activity)
+          ? (Array.isArray(e.activity[0]?.project) ? e.activity[0]?.project[0]?.name : e.activity[0]?.project?.name)
+          : (Array.isArray(e.activity?.project) ? e.activity.project[0]?.name : e.activity?.project?.name) || 'Unknown Project';
+
+        const key = `${uEmail}-${pName}-${e.status}`;
+        if (!grouped[key]) {
+          grouped[key] = {
+            user_email: uEmail,
+            project_name: pName,
+            total_hours: 0,
+            status: e.status
+          };
+        }
+        grouped[key].total_hours += Number(e.hours);
+      });
+
+      setReportData(Object.values(grouped).sort((a, b) => b.total_hours - a.total_hours));
+    } else {
+      setReportData([]);
+    }
+  }, []);
+
   useEffect(() => {
     async function loadManagerData() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -85,31 +154,9 @@ export default function ManageDashboard() {
       setLoading(false);
     }
     loadManagerData();
+
   }, [router, loadReportData, loadPendingLeaves]);
 
-  const loadPendingLeaves = React.useCallback(async () => {
-    const { data } = await supabase
-      .from('time_entries')
-      .select(`
-        id,
-        date,
-        hours,
-        status,
-        user:profiles!inner(email),
-        activity:activities!inner(name)
-      `)
-      .eq('status', 'pending')
-      .order('date', { ascending: false });
-
-    if (data) {
-      setPendingLeaves((data as unknown as { id: string, date: string, hours: number, status: string, user: { email?: string } | { email?: string }[], activity: { name?: string } | { name?: string }[] }[]).map((d) => ({
-        ...d,
-        user: { email: Array.isArray(d.user) ? d.user[0]?.email || '' : d.user?.email || '' },
-        activity: { name: Array.isArray(d.activity) ? d.activity[0]?.name || '' : d.activity?.name || '' }
-      })));
-    }
-  }, []);
-
   const handleLeaveAction = async (id: string, newStatus: 'approved' | 'rejected') => {
     const { error } = await supabase
       .from('time_entries')
@@ -121,140 +168,6 @@ export default function ManageDashboard() {
       loadReportData(reportMonth); // Refresh reports
     }
   };
-
-  const loadReportData = React.useCallback(async (date: Date) => {
-    const startDate = format(startOfMonth(date), 'yyyy-MM-dd');
-    const endDate = format(endOfMonth(date), 'yyyy-MM-dd');
-
-    // In a real application, you'd likely create a Postgres View or RPC for this aggregation.
-    // For this prototype, we'll fetch entries and aggregate client-side to satisfy the constraint quickly.
-    const { data: entries } = await supabase
-      .from('time_entries')
-      .select(`
-        hours,
-        status,
-        user:profiles!inner(email),
-        activity:activities!inner(project:projects!inner(name))
-      `)
-      .gte('date', startDate)
-      .lte('date', endDate);
-
-    if (entries) {
-      // Grouping logic
-      const grouped: Record<string, { user_email: string; project_name: string; total_hours: number; status: string }> = {};
-
-      entries.forEach((e: { user: { email: string }, activity: { project: { name: string } }, status: string, hours: number }) => {
-      entries.forEach((e: any) => {
-        const uEmail = Array.isArray(e.user) ? e.user[0]?.email : e.user?.email || 'Unknown User';
-        const pName = Array.isArray(e.activity)
-          ? (Array.isArray(e.activity[0]?.project) ? e.activity[0]?.project[0]?.name : e.activity[0]?.project?.name)
-          : (Array.isArray(e.activity?.project) ? e.activity.project[0]?.name : e.activity?.project?.name) || 'Unknown Project';
-
-        const key = `${uEmail}-${pName}-${e.status}`;
-        const key = `${e.user.email}-${e.activity.project.name}-${e.status}`;
-        if (!grouped[key]) {
-          grouped[key] = {
-            user_email: uEmail,
-            project_name: pName,
-            total_hours: 0,
-            status: e.status
-          };
-        }
-        grouped[key].total_hours += Number(e.hours);
-      });
-
-      setReportData(Object.values(grouped).sort((a, b) => b.total_hours - a.total_hours));
-    } else {
-      setReportData([]);
-    }
-  }
-
-  useEffect(() => {
-    async function loadManagerData() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/login');
-        return;
-      }
-
-      // Check role (Admins and Business Managers allowed)
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-      if (!profile || (profile.role !== 'admin' && profile.role !== 'business_manager')) {
-        router.push('/');
-        return;
-      }
-
-      // Load Projects with Activities
-      const { data: projData } = await supabase.from('projects').select('*, activities(*)').order('created_at', { ascending: false });
-      if (projData) setProjects(projData);
-
-      // Load Users
-      const { data: usrData } = await supabase.from('profiles').select('*').order('email', { ascending: true });
-      if (usrData) setUsers(usrData);
-
-      loadReportData(new Date());
-      loadPendingLeaves();
-
-      setLoading(false);
-    }
-    loadManagerData();
-  }, [router]);
-
-  const handleLeaveAction = async (id: string, newStatus: 'approved' | 'rejected') => {
-    const { error } = await supabase
-      .from('time_entries')
-      .update({ status: newStatus })
-      .eq('id', id);
-
-    if (!error) {
-      setPendingLeaves(pendingLeaves.filter(leave => leave.id !== id));
-      loadReportData(reportMonth); // Refresh reports
-    }
-  };
-
-  useEffect(() => {
-    async function loadManagerData() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/login');
-        return;
-      }
-
-      // Check role (Admins and Business Managers allowed)
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single();
-      if (!profile || (profile.role !== 'admin' && profile.role !== 'business_manager')) {
-        router.push('/');
-        return;
-      }
-
-      // Load Projects with Activities
-      const { data: projData } = await supabase.from('projects').select('*, activities(*)').order('created_at', { ascending: false });
-      if (projData) setProjects(projData);
-
-      // Load Users
-      const { data: usrData } = await supabase.from('profiles').select('*').order('email', { ascending: true });
-      if (usrData) setUsers(usrData);
-
-      loadReportData(new Date());
-      loadPendingLeaves();
-
-      setLoading(false);
-    }
-    loadManagerData();
-
-  }, [router]);
-
-  const handleLeaveAction = async (id: string, newStatus: 'approved' | 'rejected') => {
-    const { error } = await supabase
-      .from('time_entries')
-      .update({ status: newStatus })
-      .eq('id', id);
-
-    if (!error) {
-      setPendingLeaves(pendingLeaves.filter(leave => leave.id !== id));
-      loadReportData(reportMonth); // Refresh reports
-    }
-  }, []);
 
   const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const d = new Date(e.target.value);
@@ -266,7 +179,7 @@ export default function ManageDashboard() {
     e.preventDefault();
     if (!newProjectName.trim()) return;
 
-    const { data } = await supabase.from('projects').insert([{ name: newProjectName }]).select().single();
+    const { data, error } = await supabase.from('projects').insert([{ name: newProjectName }]).select().single();
     if (data) {
       setProjects([{ ...data, activities: [] }, ...projects]);
       setNewProjectName('');
@@ -280,7 +193,7 @@ export default function ManageDashboard() {
     e.preventDefault();
     if (!newActivityName.trim()) return;
 
-    const { data } = await supabase.from('activities').insert([{ name: newActivityName, project_id: projectId }]).select().single();
+    const { data, error } = await supabase.from('activities').insert([{ name: newActivityName, project_id: projectId }]).select().single();
     if (data) {
       setProjects(projects.map(p => {
         if (p.id === projectId) {
