@@ -27,8 +27,15 @@ export default function Login() {
       router.push('/');
       router.refresh();
     } catch (error: unknown) {
-      if (error instanceof Error && (error.message.includes('Invalid login credentials') || error.message.includes('Email not confirmed'))) {
-        setErrorMsg(error.message);
+      // SECURITY: Map known backend errors to generic user-friendly messages to prevent Information Exposure
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid login credentials')) {
+          setErrorMsg('Invalid email or password.');
+        } else if (error.message.includes('Email not confirmed')) {
+          setErrorMsg('Please confirm your email address before signing in.');
+        } else {
+          setErrorMsg('An error occurred during authentication.');
+        }
       } else {
         setErrorMsg('An error occurred during authentication.');
       }
