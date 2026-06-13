@@ -22,8 +22,17 @@ export default function Home() {
   const weekStartDate = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
   const weekEndDate = useMemo(() => addDays(weekStartDate, 6), [weekStartDate]);
 
-  const weekDays = useMemo(() => {
-    return Array.from({ length: 7 }).map((_, i) => addDays(weekStartDate, i));
+  // Pre-compute formatted date strings to avoid calling date-fns format() repeatedly during renders
+  const weekDayDescriptors = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, i) => {
+      const date = addDays(weekStartDate, i);
+      return {
+        date,
+        dateStr: format(date, 'yyyy-MM-dd'),
+        dayName: format(date, 'EEE'),
+        dayNumber: format(date, 'dd')
+      };
+    });
   }, [weekStartDate]);
 
   const [allAvailableActivities, setAllAvailableActivities] = useState<Activity[]>([]);
@@ -94,8 +103,7 @@ export default function Home() {
   // Calculate daily sums
   const dailySums = useMemo(() => {
     const sums: Record<string, number> = {};
-    weekDays.forEach(date => {
-      const dateStr = format(date, 'yyyy-MM-dd');
+    weekDayDescriptors.forEach(({ dateStr }) => {
       let dayTotal = 0;
       Object.values(totals).forEach(activityDates => {
         if (activityDates[dateStr]) {
@@ -105,7 +113,9 @@ export default function Home() {
       sums[dateStr] = dayTotal;
     });
     return sums;
-  }, [totals, weekDays]);
+  }, [totals, weekDayDescriptors]);
+
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
@@ -149,15 +159,15 @@ export default function Home() {
               Project / Activity
             </div>
             <div className="w-3/4 grid grid-cols-7">
-              {weekDays.map(date => {
-                const isToday = format(new Date(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+              {weekDayDescriptors.map(({ dateStr, dayName, dayNumber, date }) => {
+                const isToday = todayStr === dateStr;
                 return (
                   <div key={date.toString()} className={`p-3 text-center border-r border-gray-200 last:border-r-0 ${isToday ? 'bg-blue-50/50' : ''}`}>
                     <div className={`text-xs font-medium uppercase ${isToday ? 'text-blue-600' : 'text-gray-500'}`}>
-                      {format(date, 'EEE')}
+                      {dayName}
                     </div>
                     <div className={`text-lg font-light ${isToday ? 'text-blue-700 font-medium' : 'text-gray-900'}`}>
-                      {format(date, 'dd')}
+                      {dayNumber}
                     </div>
                   </div>
                 );
@@ -207,8 +217,7 @@ export default function Home() {
               Total Hours
             </div>
             <div className="w-3/4 grid grid-cols-7">
-              {weekDays.map((date, i) => {
-                const dateStr = format(date, 'yyyy-MM-dd');
+              {weekDayDescriptors.map(({ dateStr }, i) => {
                 const total = dailySums[dateStr] || 0;
                 const isOvertime = total > 8;
                 const isInvalid = total > 24;
