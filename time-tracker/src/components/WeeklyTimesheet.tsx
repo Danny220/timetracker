@@ -43,8 +43,9 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
       const date = addDays(weekStartDate, i);
       const dateStr = format(date, 'yyyy-MM-dd');
       const { isNonWorking, reason } = isNonWorkingDay(dateStr);
+      const ariaLabelDate = format(date, 'EEEE, MMMM do');
 
-      return { date, dateStr, isNonWorking, reason };
+      return { date, dateStr, isNonWorking, reason, ariaLabelDate };
     });
   }, [weekStartDate]);
 
@@ -191,16 +192,21 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
 
       {/* Grid Cells */}
       <div className="w-3/4 grid grid-cols-7">
-        {weekDayDescriptors.map(({ dateStr, isNonWorking }) => {
+        {weekDayDescriptors.map(({ dateStr, isNonWorking, ariaLabelDate }) => {
           const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
           const status = savingStatus[dateStr];
+          const inputId = `input-${activity.id}-${dateStr}`;
 
           return (
             <div
               key={dateStr}
               className={`relative p-2 border-r border-gray-200 last:border-r-0 flex flex-col justify-center items-center ${isNonWorking ? 'bg-gray-100/60' : 'bg-transparent'} ${isToday ? 'bg-blue-50/30' : ''}`}
             >
+              <label htmlFor={inputId} className="sr-only">
+                Hours for {activity.project.name}, {activity.name} on {ariaLabelDate}
+              </label>
               <input
+                id={inputId}
                 type="number"
                 min="0"
                 max="24"
