@@ -194,13 +194,18 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
         {weekDayDescriptors.map(({ dateStr, isNonWorking }) => {
           const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
           const status = savingStatus[dateStr];
+          const inputId = `time-entry-${activity.id}-${dateStr}`;
 
           return (
             <div
               key={dateStr}
               className={`relative p-2 border-r border-gray-200 last:border-r-0 flex flex-col justify-center items-center ${isNonWorking ? 'bg-gray-100/60' : 'bg-transparent'} ${isToday ? 'bg-blue-50/30' : ''}`}
             >
+              <label htmlFor={inputId} className="sr-only">
+                Hours for {activity.project.name} - {activity.name} on {dateStr}
+              </label>
               <input
+                id={inputId}
                 type="number"
                 min="0"
                 max="24"
