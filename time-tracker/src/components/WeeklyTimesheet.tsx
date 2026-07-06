@@ -171,6 +171,8 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
     }
   };
 
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+
   return (
     <div className="flex border-b border-gray-100 hover:bg-gray-50 transition-colors">
       {/* Row Header (Project & Activity) */}
@@ -192,7 +194,7 @@ const WeeklyTimesheet = React.memo(function WeeklyTimesheet({ activity, weekStar
       {/* Grid Cells */}
       <div className="w-3/4 grid grid-cols-7">
         {weekDayDescriptors.map(({ dateStr, isNonWorking }) => {
-          const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
+          const isToday = todayStr === dateStr;
           const status = savingStatus[dateStr];
 
           return (

@@ -1,0 +1,15 @@
+--- time-tracker/src/components/WeeklyTimesheet.tsx
++++ time-tracker/src/components/WeeklyTimesheet.tsx
+@@ -37,13 +37,14 @@
+   // Generate an array of 7 date descriptors for the week to prevent expensive re-calculations on every render
+   const weekDayDescriptors = useMemo(() => {
+     return Array.from({ length: 7 }).map((_, i) => {
+       const date = addDays(weekStartDate, i);
+       const dateStr = format(date, 'yyyy-MM-dd');
+       const { isNonWorking, reason } = isNonWorkingDay(dateStr);
+
+       return { date, dateStr, isNonWorking, reason };
+     });
+   }, [weekStartDate]);
+
+   const handleMassFill = () => {
