@@ -1,0 +1,10 @@
+--- time-tracker/src/app/page.tsx
++++ time-tracker/src/app/page.tsx
+@@ -107,14 +107,16 @@
+   }, [totals, weekDays]);
+
++  const todayStr = format(new Date(), 'yyyy-MM-dd');
++
+   return (
+     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
+       <Navbar />
