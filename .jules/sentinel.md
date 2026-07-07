@@ -19,3 +19,8 @@
 **Learning:** Returning unhandled database error messages directly from Next.js server actions exposes the application to Information Leakage (CWE-209). Inputs must be strictly validated before reaching database logic to prevent malformed data from causing unexpected internal errors.
 **Prevention:** Catch detailed database exceptions internally and log them using server-side logging mechanisms (e.g., `console.error`). Always return generic, non-descriptive error messages (e.g. "An unexpected error occurred") to the frontend client. Enforce strict input validation using regular expressions and exact string matching at the very beginning of the server action.
 >>>>>>> main
+
+## 2026-07-07 - IDOR in Time Entry Creation
+**Vulnerability:** Employees could log time against projects they were not assigned to by directly calling the API and specifying an `activity_id` for an unassigned project.
+**Learning:** Frontend filtering (only showing assigned activities) and basic Row Level Security (RLS) policies are insufficient to enforce hierarchical business rules like project assignments.
+**Prevention:** Implement backend PostgreSQL triggers or robust RPCs that explicitly check hierarchical permissions (like project assignment) before allowing operations, rather than relying solely on RLS ownership or frontend filtering.
